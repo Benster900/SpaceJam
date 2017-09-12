@@ -1,0 +1,63 @@
+- name: Add OSQuery repo key for Ubuntu
+  apt_key:
+    keyserver: keyserver.ubuntu.com
+    id: 1484120AC4E9F8A1A577AEEE97A80C63C9D8B80B
+  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+- name: Add OSquery repo for Ubuntu
+  apt_repository:
+    repo: deb [arch=amd64] https://osquery-packages.s3.amazonaws.com/deb deb main
+    state: present
+  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+- name: Add OSQuery repo key for CentOS
+  rpm_key:
+    state: present
+    key: https://s3.amazonaws.com/osquery-packages/rpm/RPM-GPG-KEY-osquery
+  when: ansible_distribution == 'CentOS' or ansible_os_family == "RedHat"
+
+- name: Add OSQuery repo for CentOS
+  yum_repository:
+    name: osquery-s3-rpm-repo
+    enabled: yes
+    description: OSQuery repo
+    baseurl: https://s3.amazonaws.com/osquery-packages/rpm/$basearch/
+    enabled: yes
+    gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-osquery
+    gpgcheck: yes
+  when: ansible_distribution == 'CentOS' or ansible_os_family == "RedHat"
+  
+- name: Install OSQuery
+  package:
+    name: osquery
+    state: installed
+
+- name: Get cert for Doorman
+  shell: openssl s_client -showcerts -connect {{ doorman_domain }}:{{ doorman_port }} </dev/null 2>/dev/null|openssl x509 -outform PEM | sudo tee /etc/osquery/certificate.crt
+
+- name: Copy OSQuery flags file
+  template:
+    src: files/osquery.flags
+    dest: /etc/osquery/osquery.flags
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Copy OSQuery secret
+  template:
+    src: files/osquery.key
+    dest: /etc/osquery/osquery.key
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Enable OSQuery service
+  service:
+    name: osqueryd
+    state: restarted
+    enabled: yes
+- name: Send slack notification when done
+  slack:
+    token: "{{ slack_token }}"
+    msg: '{{ ansible_nodename }}:{{ ansible_default_ipv4.address }} - Finished setting OSQuery agent'
+    channel: "{{ slack_channel }}"

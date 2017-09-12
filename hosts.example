@@ -1,0 +1,14 @@
+[manager]
+<manager IP>
+
+[agents]
+<agent 1 ip addr>:<port>
+<agent 2 ip addr>:<port>
+<agent 3 ip addr>:<port>
+<agent N ip addr>:<port>
+
+[database]
+<agent X ip addr>:<port>
+
+[webserver]
+<agent X ip addr>:<port>

@@ -1,0 +1,99 @@
+####################################################################
+# Install Bro dependencies
+####################################################################
+- name: Install Bro dependencies
+  yum:
+    name: '*'
+    state: latest
+- package: name={{ item }} state=installed
+  with_items:
+    - cmake
+    - make
+    - gcc
+    - gcc-c++
+    - flex
+    - bison
+    - libpcap-devel
+    - openssl-devel
+    - python-devel
+    - swig
+    - zlib-devel
+    - git
+
+####################################################################
+# Bro git repo
+####################################################################
+- stat:
+    path: /tmp/bro
+  register: stat_bro
+- git:
+    repo: git://git.bro.org/bro
+    recursive: yes
+    dest: /tmp/bro
+  when: stat_bro.stat.exists == False
+
+####################################################################
+# Compile Bro from source
+####################################################################
+- stat:
+    path: /usr/local/bro
+  register: stat_bro
+- name: Compile Bro from source
+  command: "{{ item }}"
+  args:
+    chdir: /tmp/bro
+  with_items:
+    - ./configure
+    - make
+    - make install
+  when: stat_bro.stat.exists == False
+
+####################################################################
+# Setup Bro manager config
+####################################################################
+- name: Setup Bro node config
+  template:
+    src: files/node.cfg
+    dest: /usr/local/bro/etc/node.cfg
+    owner: root
+    group: root
+    mode: '0600'
+
+####################################################################
+# Start Bro
+####################################################################
+- name: Start Bro
+  command: "{{ item }}"
+  with_items:
+    - /usr/local/bro/bin/broctl cron enable
+    - /usr/local/bro/bin/broctl deploy
+    - /usr/local/bro/bin/broctl status
+
+####################################################################
+# Install/Setup FireallD
+####################################################################
+- name: Install/Setup FireallD
+  yum:
+    name: firewalld
+    state: latest
+- service:
+    name: firewalld
+    state: started
+    enabled: yes
+- firewalld:
+    port: 44760/tcp
+    permanent: true
+    state: enabled
+- service:
+    name: firewalld
+    state: restarted
+    enabled: yes
+
+####################################################################
+#  Slack notification
+####################################################################
+- name: Send slack notification when done
+  slack:
+    token: "{{ slack_token }}"
+    msg: '{{ ansible_nodename }}:{{ ansible_default_ipv4.address }} - Finished setting up Bro manager'
+    channel: "{{ slack_channel }}"

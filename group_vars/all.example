@@ -1,0 +1,29 @@
+base_domain: <domain>
+
+slack_channel: <slack channel>
+slack_token: <slack channel token>
+
+doorman_port: 443
+doorman_domain: doorman.{{ base_domain }}
+doorman_secret_key: <doorman secret key>
+
+wazuh_domain: wazuh.{{ base_domain }}
+wazuh_agent_protocol: tcp
+wazuh_api_user: wazuhadmin
+wazuh_api_pass: <password for wazuh>
+wazuh_api_domain: "{{ wazuh_domain  }}"
+
+kibana_user: kibanaadmin
+kibana_pass: <password for kibana>
+
+doorman_postgresql_user: doorman
+doorman_postgresql_pass: <password for doorman db user>
+doorman_postgresql_db: doorman
+
+doorman_webgui_user: admin
+doorman_webgui_pass: <password for doorman webgui>
+
+bro_domain: bro.{{ base_domain }}
+
+doorman_sqlalchemy_database_uri: postgresql://{{ doorman_postgresql_user }}:{{ doorman_postgresql_pass }}@127.0.0.1:5432/{{ doorman_postgresql_db }}
+doorman_redis_uri: redis://localhost:6379/0

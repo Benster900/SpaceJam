@@ -1,0 +1,74 @@
+- name: Set hostname
+  command: hostnamectl set-hostname ip-{{ ansible_default_ipv4.address }}
+
+- name: Add Wazuh repo for CentOS
+  yum_repository:
+    name: wazuh_repo
+    description: Wazuh agent repo
+    enabled: yes
+    baseurl: https://packages.wazuh.com/yum/el/$releasever/$basearch
+    enabled: yes
+    gpgkey: https://packages.wazuh.com/key/GPG-KEY-WAZUH
+    gpgcheck: yes
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+- yum_repository:
+    name: wazuh_repo
+    description: Wazuh agent repo
+    enabled: yes
+    baseurl: https://packages.wazuh.com/yum/el/7/$basearch
+    enabled: yes
+    gpgkey: https://packages.wazuh.com/key/GPG-KEY-WAZUH
+    gpgcheck: yes
+  when: ansible_distribution == 'Fedora'
+
+- name: Install Wazuh
+  package:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - libselinux-python
+    - wazuh-agent
+
+- lineinfile:
+    path: /var/ossec/etc/ossec.conf
+    regexp: '<server-ip>MANAGER_IP</server-ip>'
+    line: '\t<server-ip>{{ wazuh_api_domain }}</server-ip>'
+
+- get_url:
+    url: https://raw.githubusercontent.com/wazuh/wazuh-api/2.0/examples/api-register-agent.sh
+    dest: /tmp/api-register-agent.sh
+    mode: 0755
+- lineinfile:
+    path: /tmp/api-register-agent.sh
+    regexp: 'API_IP='
+    line: 'API_IP="{{ wazuh_api_domain }}"'
+- lineinfile:
+    path: /tmp/api-register-agent.sh
+    regexp: '^PROTOCOL='
+    line: 'PROTOCOL="https"'
+- lineinfile:
+    path: /tmp/api-register-agent.sh
+    regexp: '^USER='
+    line: 'USER="{{ wazuh_api_user }}"'
+- lineinfile:
+    path: /tmp/api-register-agent.sh
+    regexp: '^PASSWORD='
+    line: 'PASSWORD="{{ wazuh_api_pass }}"'
+- name: Register Wazuh API script
+  shell: /tmp/api-register-agent.sh
+
+
+- name: Enable Wazuh service
+  service:
+    name: wazuh-agent
+    state: restarted
+    enabled: yes
+
+####################################################################
+#  Slack notification
+####################################################################
+- name: Send slack notification when done
+  slack:
+    token: "{{ slack_token }}"
+    msg: '{{ ansible_nodename }}:{{ ansible_default_ipv4.address }} - Finished setting up Wazuh agent'
+    channel: "{{ slack_channel }}"

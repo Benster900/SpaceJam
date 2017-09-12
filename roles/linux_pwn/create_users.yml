@@ -1,0 +1,69 @@
+- user:
+    name: "{{ item }}"
+    state: present
+    update_password: always
+    password: "{{ rockyou|random|password_hash('sha512') }}"
+  ##            debug: msg="{{ item }}\'s password is {{ passtest }}."
+  with_items:
+    - jim
+    - james
+    - jones
+    - rick
+    - morty
+    - marty
+    - larry
+    - bobby
+    - jerry
+    - jessica
+    - america
+    - dude2222
+    - minion
+    - placeholder
+    - ubuntu
+    - admin
+    - host
+    - user
+    - play
+    - book
+    - yaml
+    - ansible
+    - username
+    - otto
+    - rc3user
+    - student
+    - cseclabs
+    - beer
+    - hades
+    - optimus
+    - megatron
+    - zeus
+    - glados
+    - holdmybeer
+    - password
+    - hackme
+    - rockyou
+    - arnold
+    - palmer
+    - putty
+    - megan
+    - morgan
+    - molly
+    - equifax
+    - jack
+    - steve
+    - reddit
+    - bumblebee
+    - spherical
+    - wheel
+    - treeroot
+##- name: Set users to sudo group
+##  user:
+##    name: "{{ item }}"
+##    state: present
+##    group: wheel
+##  with_items:
+##    - morgan
+##    - hackme
+##    - equifax
+##    - minion
+##    - placeholder

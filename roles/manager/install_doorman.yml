@@ -1,0 +1,309 @@
+####################################################################
+# Setup NTP
+####################################################################
+- name: Setup NTP time sync
+  package: name={{ item }} state=installed
+  with_items:
+    - ntpdate
+    - ntp-doc
+
+- service:
+    name: ntpd
+    state: started
+    enabled: yes
+####################################################################
+# Update system
+####################################################################
+- name: Update system and add RHEL
+  yum_repository:
+    name: epel
+    description: EPEL YUM repo
+    baseurl: https://download.fedoraproject.org/pub/epel/$releasever/$basearch/
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+- yum:
+    name: '*'
+    state: latest
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+- dnf:
+    name: '*'
+    state: latest
+  when: ansible_distribution == 'Fedora'
+- package: name={{ item }} state=installed
+  with_items:
+    - python-pip
+- pip:
+    name={{ item }}
+  with_items:
+    - psycopg2
+
+####################################################################
+# Install/Setup Postgres add user and database for Doorman
+####################################################################
+- name: Add Postgres repo
+  yum:
+    name: https://download.postgresql.org/pub/repos/yum/9.6/redhat/rhel-7-x86_64/pgdg-redhat96-9.6-3.noarch.rpm
+    state: present
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+- name: Install/Setup Postgres
+  package: name={{ item }} state=installed
+  with_items:
+    - postgresql96-server
+    - postgresql96
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+- package: name={{ item }} state=installed
+  with_items:
+    - postgresql-server
+    - postgresql-contrib
+  when: ansible_distribution == 'Fedora'
+- shell: "/usr/pgsql-9.6/bin/postgresql96-setup initdb"
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+  ignore_errors: True
+- shell: "/usr/bin/postgresql-setup initdb"
+  when: ansible_distribution == 'Fedora'
+  ignore_errors: True
+- lineinfile:
+    path: /var/lib/pgsql/9.6/data/pg_hba.conf
+    regexp: '^host    all             all             127.0.0.1/32            ident'
+    line: 'host    all             all             127.0.0.1/32            md5'
+- service:
+    name: postgresql-9.6
+    state: restarted
+    enabled: yes
+
+- name: Create Postgres database for Doorman
+  postgresql_db:
+    state: present
+    name: '{{ doorman_postgresql_db }}'
+    login_user: postgres
+  become: true
+  become_user: postgres
+
+- name: Create Postgres user for Doorman
+  postgresql_user:
+    state: present
+    db: '{{ doorman_postgresql_db }}'
+    name: '{{ doorman_postgresql_user }}'
+    password: "{{ doorman_postgresql_pass }}"
+    priv: 'ALL'
+    login_user: postgres
+  become: true
+  become_user: postgres
+
+- name: Ensure Doorman user has access to database
+  postgresql_user:
+    name: '{{ doorman_postgresql_user }}'
+    db: '{{ doorman_postgresql_db }}'
+    password: "{{ doorman_postgresql_pass }}"
+    priv: 'ALL'
+  become: true
+  become_user: postgres
+
+- name: Create doorman unix user
+  user:
+    name: doorman
+
+####################################################################
+# Install/Setup Redis
+####################################################################
+- name: Install/Setup Redis
+  package: name={{ item }} state=installed
+  with_items:
+    - redis
+- service:
+    name: redis
+    state: started
+    enabled: yes
+
+####################################################################
+# Install/Setup Doorman
+####################################################################
+- name: Install/Setup Doorman
+  package: name={{ item }} state=installed
+  with_items:
+    - python-pip
+    - python-devel
+    - libffi-devel
+    - gcc
+    - postgresql-devel
+- shell: pip install --upgrade pip
+- git:
+    repo: https://github.com/mwielgoszewski/doorman.git
+    dest: /opt/doorman
+  ignore_errors: True
+- pip:
+    name: "{{ item }}"
+  with_items:
+    - virtualenv
+    - pexpect
+
+- name: Run command as doorman
+  command: cd /opt/doorman && virtualenv env
+  become: true
+  become_user: doorman
+- pip:
+    requirements: /opt/doorman/requirements.txt
+    virtualenv: /opt/doorman/env
+- pip:
+    name: '{{ item }}'
+    virtualenv: /opt/doorman/env
+  with_items:
+    - uwsgi
+    - flask
+- file:
+    path: /opt/doorman
+    owner: doorman
+    group: doorman
+    state: directory
+    recurse: yes
+- file:
+    path: /var/log/doorman
+    owner: doorman
+    group: doorman
+    state: directory
+    recurse: yes
+- template:
+    src: files/settings.py
+    dest: /opt/doorman/doorman/settings.py
+    owner: doorman
+    group: doorman
+    mode: 0644
+- template:
+    src: files/doorman.ini
+    dest: /opt/doorman/doorman.ini
+    owner: doorman
+    group: doorman
+    mode: 0644
+
+- name: Set env var to production
+  lineinfile:
+    dest: /etc/profile
+    line: export DOORMAN_ENV=prod
+- shell: "echo $DOORMAN_ENV"
+
+- name: Initialize doorman database
+  become: true
+  become_method: su
+  become_user: doorman
+  shell: |
+    export DOORMAN_ENV=prod
+    source env/bin/activate
+    python manage.py db upgrade
+    exit 0
+  args:
+    chdir: /opt/doorman
+
+- name: Add Doorman local user
+  expect:
+    command: "env/bin/python manage.py adduser {{ doorman_webgui_user }}"
+    responses:
+      (?i)Password*: "{{ doorman_webgui_pass }}"
+    chdir: /opt/doorman
+  become: yes
+  become_method: su
+  become_user: doorman
+  ignore_errors: True
+- npm:
+    name: "{{ item }}"
+    global: yes
+  with_items:
+    - bower
+    - less
+- bower:
+    path: /opt/doorman
+
+####################################################################
+# Install/Setup Nginx + wsgi/flask + OpenSSL
+####################################################################
+- name: Install/Setup Nginx + wsgi/flask + OpenSSL
+  package: name=nginx state=installed
+- file:
+    path: /etc/nginx/ssl
+    owner: root
+    group: root
+    state: directory
+- stat:
+    path: /etc/ssl/certs/dhparam.pem 2048
+  register: stat_dhparam
+- shell: openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
+  when: stat_dhparam.stat.exists == False
+
+- stat:
+    path: /etc/nginx/ssl/certificate.crt
+  register: stat_cert
+- shell: openssl req -new -nodes -x509 -days 3650 -subj "/C=US/ST=NY/L=Rochester/O=None/CN={{ doorman_domain }}" -keyout /etc/nginx/ssl/private.key -out /etc/nginx/ssl/certificate.crt
+  when: stat_cert.stat.exists == False
+
+- template:
+    src: files/nginx.conf
+    dest: /etc/nginx/nginx.conf
+    owner: root
+    group: root
+    mode: '0600'
+- template:
+    src: files/doorman.conf
+    dest: /etc/nginx/conf.d/doorman.conf
+    owner: root
+    group: root
+    mode: '0600'
+- template:
+    src: files/doorman.service
+    dest: /etc/systemd/system/doorman.service
+    owner: root
+    group: root
+    mode: '0600'
+
+####################################################################
+# Set SElinux to permissive mode
+####################################################################
+- selinux:
+    policy: targeted
+    state: permissive
+
+####################################################################
+# Restart Nginx and doorman service
+####################################################################
+- service:
+    name: '{{ item }}'
+    state: started
+    enabled: yes
+  with_items:
+    - doorman
+    - nginx
+
+####################################################################
+# Install/Setup FireallD
+####################################################################
+- name: Install/Setup FireallD
+  yum:
+    name: firewalld
+    state: latest
+- service:
+    name: firewalld
+    state: started
+    enabled: yes
+- firewalld:
+    service: ssh
+    permanent: true
+    state: enabled
+- firewalld:
+    service: https
+    permanent: true
+    state: enabled
+- firewalld:
+    service: http
+    permanent: true
+    state: enabled
+- service:
+    name: firewalld
+    state: restarted
+    enabled: yes
+
+####################################################################
+#  Slack notification
+####################################################################
+- name: Send slack notification when done
+  slack:
+    token: "{{ slack_token }}"
+    msg: '{{ ansible_nodename }}:{{ ansible_default_ipv4.address }} - Finished setting up Doorman manager'
+    channel: "{{ slack_channel }}"

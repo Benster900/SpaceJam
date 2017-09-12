@@ -1,0 +1,243 @@
+- name: Set hostname
+  hostname:
+    name: wazuh-manager
+  when: ansible_hostname == "localhost.localdomain"
+
+- name: Setup NTP time sync
+  package: name={{ item }} state=installed
+  with_items:
+    - ntpdate
+    - ntp-doc
+
+- service:
+    name: ntpd
+    state: started
+    enabled: yes
+
+- name: Update system and add RHEL
+  yum_repository:
+    name: epel
+    description: EPEL YUM repo
+    baseurl: https://download.fedoraproject.org/pub/epel/$releasever/$basearch/
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+- yum:
+    name: '*'
+    state: latest
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+- package: name={{item}} state=installed
+  with_items:
+    - python-pip
+- pip:
+    name: pexpect
+    version: 3.3
+
+- name: Add Wazuh repo
+  yum_repository:
+    name: wazuh_repo
+    description: Wazuh Repo
+    baseurl: https://packages.wazuh.com/yum/el/$releasever/$basearch
+    enabled: 1
+    gpgcheck: 1
+    gpgkey: https://packages.wazuh.com/key/GPG-KEY-WAZUH
+    state: present
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+- name: Install/Setup Wazuh Manager
+  yum:
+    name: wazuh-manager
+    state: installed
+- template:
+    src: files/ossec_server.conf
+    dest: /var/ossec/etc/ossec.conf
+    owner: root
+    group: root
+    mode: '0600'
+- service:
+    name: wazuh-manager
+    state: started
+    enabled: yes
+
+- name: Install/Setup Wazuh API
+  get_url:
+    url: https://rpm.nodesource.com/setup_6.x
+    dest: /tmp/wazuh-api.sh
+- command: bash /tmp/wazuh-api.sh
+- yum: name={{item}} state=installed
+  with_items:
+    - wazuh-api
+    - nodejs
+- shell: node htpasswd -b user {{ wazuh_api_user }} {{ wazuh_api_pass }}
+  args:
+    chdir: /var/ossec/api/configuration/auth
+- lineinfile:
+    path: /var/ossec/api/configuration/config.js
+    regexp: '^config.host ='
+    line: 'config.host = "127.0.0.1";'
+- lineinfile:
+    path: /var/ossec/api/configuration/config.js
+    regexp: '^config.port ='
+    line: 'config.port = "5000";'
+- lineinfile:
+    path: /var/ossec/api/configuration/config.js
+    regexp: '^config.BehindProxyServer ='
+    line: 'config.BehindProxyServer = "yes";'
+- service:
+    name: wazuh-api
+    state: restarted
+    enabled: yes
+
+- name: Add Elastic repo
+  rpm_key:
+    state: present
+    key: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+- yum_repository:
+    name: elastic.co
+    description: Elasticsearch repository for 5.x packages
+    baseurl: https://artifacts.elastic.co/packages/5.x/yum
+    enabled: yes
+    gpgcheck: yes
+    gpgkey: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+    state: present
+
+- name: Install/Setup Elasticsearch
+  yum: name={{item}} state=installed
+  with_items:
+    - elasticsearch
+    - java
+    - curl
+- service:
+    name: elasticsearch
+    state: started
+    enabled: yes
+- pause:
+    seconds: 30
+- shell: >
+    curl https://raw.githubusercontent.com/wazuh/wazuh-kibana-app/master/server/startup/integration_files/template_file.json | curl -XPUT 'http://localhost:9200/_template/wazuh' -H 'Content-Type: application/json' -d @-
+- shell: >
+    curl https://raw.githubusercontent.com/wazuh/wazuh-kibana-app/master/server/startup/integration_files/alert_sample.json | curl -XPUT "http://localhost:9200/wazuh-alerts-"`date +%Y.%m.%d`"/wazuh/sample" -H 'Content-Type: application/json' -d @-
+
+- name: Install/Setup Logstash
+  yum:
+    name: logstash
+    state: installed
+- shell: curl -so /etc/logstash/conf.d/01-wazuh.conf https://raw.githubusercontent.com/wazuh/wazuh/2.0/extensions/logstash/01-wazuh.conf
+- shell: curl -so /etc/logstash/wazuh-elastic5-template.json https://raw.githubusercontent.com/wazuh/wazuh/2.0/extensions/elasticsearch/wazuh-elastic5-template.json
+- shell: sed -i -e '/## Remote Wazuh Manager - Filebeat input/,+9 s/^/#/' /etc/logstash/conf.d/01-wazuh.conf
+- shell: sed -i -e '/## Local Wazuh Manager - JSON file input/,+7 s/#//' /etc/logstash/conf.d/01-wazuh.conf
+- service:
+    name: logstash
+    state: started
+    enabled: yes
+
+- name: Install/Setup Kibana
+  yum:
+    name: kibana
+    state: installed
+- shell: /usr/share/kibana/bin/kibana-plugin install https://packages.wazuh.com/wazuhapp/wazuhapp.zip
+  ignore_errors: yes
+- service:
+    name: kibana
+    state: restarted
+    enabled: yes
+
+- name: Install/Setup Nginx + OpenSSL
+  yum: name={{item}} state=installed
+  with_items:
+    - nginx
+    - httpd-tools
+- expect:
+    command: 'htpasswd -c /etc/nginx/htpasswd.users {{kibana_user}}'
+    responses:
+      (?i)password: "{{kibana_pass}}"
+- shell: cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
+- template:
+    src: files/nginx.conf
+    dest: /etc/nginx/nginx.conf
+    owner: root
+    group: root
+    mode: '0600'
+
+- file:
+    path: /etc/nginx/ssl
+    state: directory
+    mode: 0755
+
+- shell: openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
+- shell: openssl req -new -nodes -x509 -days 3650 -subj "/C=US/ST=NY/L=Rochester/O=None/CN={{ wazuh_domain }}" -keyout /etc/nginx/ssl/wazuh.key -out /etc/nginx/ssl/wazuh.crt
+
+- template:
+    src: files/nginx_wazuh.conf
+    dest: /etc/nginx/conf.d/nginx_wazuh.conf
+    owner: root
+    group: root
+    mode: '0600'
+- template:
+    src: files/nginx_wazuh_api.conf
+    dest: /etc/nginx/conf.d/nginx_wazuh_api.conf
+    owner: root
+    group: root
+    mode: '0600'
+
+- service:
+    name: nginx
+    state: started
+    enabled: yes
+
+- name: Set SElinux to permissive
+  selinux:
+    policy: targeted
+    state: permissive
+
+- name: Install/Setup FireallD
+  yum:
+    name: firewalld
+    state: latest
+- service:
+    name: firewalld
+    state: started
+    enabled: yes
+- firewalld:
+    service: ssh
+    permanent: true
+    state: enabled
+- firewalld:
+    service: http
+    permanent: true
+    state: enabled
+- firewalld:
+    service: https
+    permanent: true
+    state: enabled
+- firewalld:
+    port: 514/tcp
+    permanent: true
+    state: enabled
+- firewalld:
+    port: 514/tcp
+    permanent: true
+    state: enabled
+- firewalld:
+    port: 1514/udp
+    permanent: true
+    state: enabled
+- firewalld:
+    port: 5044/tcp
+    permanent: true
+    state: enabled
+- firewalld:
+    port: 55000/tcp
+    permanent: true
+    state: enabled
+- service:
+    name: firewalld
+    state: restarted
+    enabled: yes
+
+####################################################################
+#  Slack notification
+####################################################################
+- name: Send slack notification when done
+  slack:
+    token: "{{ slack_token }}"
+    msg: '{{ ansible_nodename }}:{{ ansible_default_ipv4.address }} - Finished setting up Wazuh manager'
+    channel: "{{ slack_channel }}"

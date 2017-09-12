@@ -1,0 +1,9 @@
+- name: Install/Setup MySQL
+  package:
+    name: mysql-server
+    state: installed
+- service:
+    name: mysql
+    state: started
+    enabled: yes
+- shell: python philer.py    

@@ -1,0 +1,15 @@
+---
+- hosts: agents
+  user: ec2-user
+  sudo: yes
+  tasks:
+    - name: Create user accounts
+      include: roles/linux_pwn/create_users.yml
+      vars:
+        rockyou: "{{ lookup('file', 'files/rockyou.txt').split('\n') }}"
+##    - name: Instal and register OSSEC agent
+##      include: roles/linux_pwn/install_wazuh_agent.yml
+##    - name: Install Bro
+##      include: roles/linux_pwn/install_bro_worker.yml
+    - name: Install OSQuery
+      include: roles/linux_pwn/install_osquery_agent.yml
