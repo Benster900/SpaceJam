@@ -1,0 +1,104 @@
+####################################################################
+# Set hostname
+####################################################################
+- name: Set hostname
+  command: hostnamectl set-hostname {{ freeipa_hostname }}.{{ freeipa_domain }}
+- lineinfile:
+    path: /etc/hosts
+    line: '{{ ansible_default_ipv4.address }}    {{ freeipa_hostname }}.{{ freeipa_domain }}'
+####################################################################
+# Setup NTP
+####################################################################
+- name: Setup NTP time sync
+  package: name={{ item }} state=installed
+  with_items:
+    - ntpdate
+    - ntp-doc
+
+- service:
+    name: ntpd
+    state: started
+    enabled: yes
+####################################################################
+# Update system
+####################################################################
+- name: Update system and add RHEL
+  yum_repository:
+    name: epel
+    description: EPEL YUM repo
+    baseurl: https://download.fedoraproject.org/pub/epel/$releasever/$basearch/
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+- yum:
+    name: '*'
+    state: latest
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+####################################################################
+# Install/Setup FreeIPA
+####################################################################
+- name: Install IPAserver
+  yum: name='{{ item }}' state=present
+  with_items:
+    - '*'
+    - vim 
+    - net-tools 
+    - htop
+    - ipa-server 
+    - ipa-server-dns
+- name: Run the ipa-server-install command
+  command: ipa-server-install -U --setup-dns --allow-zone-overlap --hostname={{ freeipa_hostname }}.{{ freeipa_domain }} --domain={{ freeipa_domain }} --realm={{ freeipa_domain | upper }} --ds-password={{ freeipa_directory_password }} --admin-password={{ freeipa_admin_password }} --forwarder={{ freeipa_dns_server1 }} --forwarder={{ freeipa_dns_server2 }}
+  ignore_errors: yes
+
+
+
+####################################################################
+# Install/Setup FireallD
+####################################################################
+- name: Install/Setup FireallD
+  yum:
+    name: firewalld
+    state: latest
+- service:
+    name: firewalld
+    state: started
+    enabled: yes
+- firewalld:
+    service: ssh
+    permanent: true
+    state: enabled
+- firewalld:
+    service: ntp
+    permanent: true
+    state: enabled
+- firewalld:
+    service: http
+    permanent: true
+    state: enabled
+- firewalld:
+    service: https
+    permanent: true
+    state: enabled
+- firewalld:
+    service: ldap
+    permanent: true
+    state: enabled
+- firewalld:
+    service: ldaps
+    permanent: true
+    state: enabled
+- firewalld:
+    service: kerberos
+    permanent: true
+    state: enabled
+- firewalld:
+    service: kpasswd
+    permanent: true
+    state: enabled
+- firewalld:
+    service: dns
+    permanent: true
+    state: enabled
+- service:
+    name: firewalld
+    state: restarted
+    enabled: yes

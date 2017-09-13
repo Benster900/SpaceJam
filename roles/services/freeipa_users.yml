@@ -1,0 +1,97 @@
+####################################################################
+# Seutp/Config users
+####################################################################
+- name: Create users for env
+  ipa_user:
+    name: '{{ item }}'
+    password: "{{ rockyou|random }}"
+    givenname: '{{ item }}'
+    sn: Acme
+    state: present
+    ipa_host: '{{ freeipa_hostname }}.{{ freeipa_domain }}'
+    ipa_user: '{{ freeipa_admin_username }}'
+    ipa_pass: '{{ freeipa_admin_password }}'
+  with_items:
+    - jim
+    - james
+    - jones
+    - rick
+    - morty
+    - marty
+    - larry
+    - bobby
+    - jerry
+    - jessica
+    - america
+    - dude2222
+    - minion
+    - placeholder
+    - ubuntu
+    - host
+    - user
+    - play
+    - book
+    - yaml
+    - ansible
+    - username
+    - otto
+    - rc3user
+    - student
+    - cseclabs
+    - beer
+    - hades
+    - optimus
+    - megatron
+    - zeus
+    - glados
+    - holdmybeer
+    - password
+    - hackme
+    - rockyou
+    - arnold
+    - palmer
+    - putty
+    - megan
+    - morgan
+    - molly
+    - equifax
+    - jack
+    - steve
+    - reddit
+    - bumblebee
+    - spherical
+    - wheel
+    - treeroot
+  run_once: true
+
+- name: Create admin users for env
+  ipa_user: 
+    name: '{{ item }}'
+    password: "{{ rockyou|random }}"
+    givenname: '{{ item }}'
+    sn: Acme
+    state: present
+    ipa_host: '{{ freeipa_hostname }}.{{ freeipa_domain }}'
+    ipa_user: '{{ freeipa_admin_username }}'
+    ipa_pass: '{{ freeipa_admin_password }}'
+  with_items:
+   - morgan
+   - hackme
+   - equifax
+   - minion
+   - placeholder
+   
+- ipa_group:
+    name: admins
+    user: '{{ item }}'
+    state: present
+    ipa_host: '{{ freeipa_hostname }}.{{ freeipa_domain }}'
+    ipa_user: '{{ freeipa_admin_username }}'
+    ipa_pass: '{{ freeipa_admin_password }}'
+  with_items:
+  - morgan
+  - hackme
+  - equifax
+  - minion
+  - placeholder
+  

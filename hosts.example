@@ -7,6 +7,9 @@
 <agent 3 ip addr>:<port>
 <agent N ip addr>:<port>
 
+[freeipa]
+<agent X ip addr>:<port>
+
 [database]
 <agent X ip addr>:<port>
 

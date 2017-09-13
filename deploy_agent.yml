@@ -1,15 +1,18 @@
 ---
 - hosts: agents
-  user: ec2-user
-  sudo: yes
-  tasks:
-    - name: Create user accounts
-      include: roles/linux_pwn/create_users.yml
-      vars:
-        rockyou: "{{ lookup('file', 'files/rockyou.txt').split('\n') }}"
+##  user: ec2-user
+##  sudo: yes
+  tasks:     
 ##    - name: Instal and register OSSEC agent
 ##      include: roles/linux_pwn/install_wazuh_agent.yml
 ##    - name: Install Bro
 ##      include: roles/linux_pwn/install_bro_worker.yml
-    - name: Install OSQuery
-      include: roles/linux_pwn/install_osquery_agent.yml
+##    - name: Install OSQuery
+##      include: roles/linux_pwn/install_osquery_agent.yml
+    - name: Install FreeIPA
+      include: 'roles/services/install_freeipa.yml'
+      vars:
+    - name: Setup/Configure FreeIPA users
+      include: 'roles/services/freeipa_users.yml'
+      vars:
+        rockyou: "{{ lookup('file', 'files/rockyou.txt').split('\n') }}"
