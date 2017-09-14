@@ -1,0 +1,31 @@
+- name: Install postfix and dovecot
+  package: name={{item}} state=installed
+  with_items:
+    - postfix
+    - dovecot
+
+- name: Dovecot config
+  template:
+    src: conf/mail/dovecot.conf
+    dest: /etc/dovecot/dovecot.conf
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Postfix config
+  template:
+    src: conf/mail/main.cf
+    dest: /etc/dovecot/main.cf
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Start Dovecot and postfix
+  service: 
+    name: '{{ item }}' 
+    state: restarted
+  with_items:
+    - postfix
+    - dovevot
+
+       
