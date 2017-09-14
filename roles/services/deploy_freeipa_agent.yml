@@ -1,0 +1,62 @@
+####################################################################
+# Set hostname
+####################################################################
+- name: Set hostname
+  command: hostnamectl set-hostname ip-{{ ansible_default_ipv4.address }}
+
+####################################################################
+# Setup NTP
+####################################################################
+- name: Setup NTP time sync
+  package: name={{ item }} state=installed
+  with_items:
+    - ntpdate
+    - ntp-doc
+
+- service:
+    name: ntpd
+    state: started
+    enabled: yes
+####################################################################
+# Update system
+####################################################################
+- name: Update system and add RHEL
+  yum_repository:
+    name: epel
+    description: EPEL YUM repo
+    baseurl: https://download.fedoraproject.org/pub/epel/$releasever/$basearch/
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+- yum:
+    name: '*'
+    state: latest
+  when: ansible_distribution == 'CentOS' or ansible_os_family == "RedHat"
+
+####################################################################
+# Install/Setup FreeIPA
+####################################################################
+- name: Install IPAserver
+  yum: name='{{ item }}' state=present
+  with_items:
+    - '*'
+    - vim 
+    - net-tools 
+    - htop
+    - freeipa-client 
+- name: Run the ipa-server-install command
+  command: ipa-server-install -U --setup-dns --allow-zone-overlap --hostname={{ freeipa_hostname }}.{{ freeipa_domain }} --domain={{ freeipa_domain }} --realm={{ freeipa_domain | upper }} --ds-password={{ freeipa_directory_password }} --principal={{ freeipa_admin_username }} --admin-password={{ freeipa_admin_password }} --forwarder={{ freeipa_dns_server1 }} --forwarder={{ freeipa_dns_server2 }}
+  ignore_errors: yes
+
+####################################################################
+# Setup /etc/resolve
+####################################################################
+- template:
+    src: files/resolv.conf
+    dest: /etc/resolv.conf
+    owner: root
+    group: root
+    mode: '0600'
+
+####################################################################
+# Setup/Config FreeIPA client
+####################################################################
+shell: ipa-client-install --hostname={{ freeipa_hostname }}.{{ freeipa_domain }} --server={{ freeipa_hostname }}.{{ freeipa_domain }} --mkhomedir --force-join --auto-forwarders --unattended --password={{ freeipa_admin_password }}

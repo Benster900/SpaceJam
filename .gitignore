@@ -2,3 +2,4 @@
 group_vars/all
 hosts
 group_vars/manager
+group_vars/agent

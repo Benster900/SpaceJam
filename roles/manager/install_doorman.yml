@@ -228,6 +228,10 @@
 - shell: openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
   when: stat_dhparam.stat.exists == False
 
+ - name: get public IP
+      ipify_facts:
+      register: public_ip
+
 - stat:
     path: /etc/nginx/ssl/certificate.crt
   register: stat_cert
@@ -265,7 +269,7 @@
 ####################################################################
 - service:
     name: '{{ item }}'
-    state: started
+    state: restarted
     enabled: yes
   with_items:
     - doorman

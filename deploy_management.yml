@@ -1,11 +1,11 @@
 - hosts: manager
   tasks:
-##    - name: Generate SSH key pair for Bro
-##      shell: ssh-keygen -b 2048 -t rsa -f /root/.ssh/id_rsa -q -N ""
-##      args:
-##        creates: /root/.ssh/id_rsa
-##    - include: 'roles/manager/install_bro_manager.yml'
-##    - include: 'roles/manager/install_wazuh_manager.yml'
-##    - include: 'roles/manager/install_doorman.yml'
-##      environment:
-##        DOORMAN_ENV: prod
+    - name: Generate SSH key pair for Bro
+      shell: ssh-keygen -b 2048 -t rsa -f /root/.ssh/id_rsa -q -N ""
+      args:
+        creates: /root/.ssh/id_rsa
+    - include: 'roles/manager/install_bro_manager.yml'
+    - include: 'roles/manager/install_wazuh_manager.yml'
+    - include: 'roles/manager/install_doorman.yml'
+      environment:
+        DOORMAN_ENV: prod

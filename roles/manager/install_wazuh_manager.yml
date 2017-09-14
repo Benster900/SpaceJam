@@ -133,6 +133,10 @@
   yum:
     name: kibana
     state: installed
+- service:
+    name: kibana
+    state: restarted
+    enabled: yes
 - shell: /usr/share/kibana/bin/kibana-plugin install https://packages.wazuh.com/wazuhapp/wazuhapp.zip
   ignore_errors: yes
 - service:
@@ -180,7 +184,7 @@
 
 - service:
     name: nginx
-    state: started
+    state: restarted
     enabled: yes
 
 - name: Set SElinux to permissive

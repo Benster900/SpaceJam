@@ -1,8 +1,1 @@
-freeipa_hostname: freeipa
-freeipa_domain: {{ base_domain }}
-freeipa_directory_password: Password123*
-freeipa_admin_username: admin
-freeipa_admin_password: Password123*
-freeipa_dns_server1: 8.8.8.8
-freeipa_dns_server2: 8.8.4.4
 

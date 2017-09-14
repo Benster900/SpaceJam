@@ -32,7 +32,7 @@
 - lineinfile:
     path: /var/ossec/etc/ossec.conf
     regexp: '<server-ip>MANAGER_IP</server-ip>'
-    line: '\t<server-ip>{{ wazuh_api_domain }}</server-ip>'
+    line: '    <server-ip>{{ wazuh_api_domain }}</server-ip>'
 
 - get_url:
     url: https://raw.githubusercontent.com/wazuh/wazuh-api/2.0/examples/api-register-agent.sh
@@ -40,8 +40,12 @@
     mode: 0755
 - lineinfile:
     path: /tmp/api-register-agent.sh
+    regexp: 'API_PORT='
+    line: 'API_PORT="{{ wazuh_api_port }}"'
+- lineinfile:
+    path: /tmp/api-register-agent.sh
     regexp: 'API_IP='
-    line: 'API_IP="{{ wazuh_api_domain }}"'
+    line: 'API_IP="{{ wazuh_domain }}"'
 - lineinfile:
     path: /tmp/api-register-agent.sh
     regexp: '^PROTOCOL='

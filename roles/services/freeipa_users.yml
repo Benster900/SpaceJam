@@ -64,34 +64,21 @@
     - treeroot
   run_once: true
 
-- name: Create admin users for env
-  ipa_user: 
-    name: '{{ item }}'
-    password: "{{ rockyou|random }}"
-    givenname: '{{ item }}'
-    sn: Acme
-    state: present
+- name: Create sudo rule for admins
+  ipa_sudorule:
+    name: sudo_users
+    description: Allow to run every command with sudo
+    cmdcategory: all
+    hostcategory: all
+    usercategory: all
+    user:
+      - '{{ item }}'
     ipa_host: '{{ freeipa_hostname }}.{{ freeipa_domain }}'
     ipa_user: '{{ freeipa_admin_username }}'
     ipa_pass: '{{ freeipa_admin_password }}'
   with_items:
-   - morgan
-   - hackme
-   - equifax
-   - minion
-   - placeholder
-   
-- ipa_group:
-    name: admins
-    user: '{{ item }}'
-    state: present
-    ipa_host: '{{ freeipa_hostname }}.{{ freeipa_domain }}'
-    ipa_user: '{{ freeipa_admin_username }}'
-    ipa_pass: '{{ freeipa_admin_password }}'
-  with_items:
-  - morgan
-  - hackme
-  - equifax
-  - minion
-  - placeholder
-  
+    - morgan
+    - hackme
+    - equifax
+    - minion
+    - placeholder
