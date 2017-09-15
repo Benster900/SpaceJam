@@ -33,11 +33,11 @@
     state: installed
 
 - name: Get cert for Doorman
-  shell: openssl s_client -showcerts -connect {{ doorman_domain }}:{{ doorman_port }} </dev/null 2>/dev/null|openssl x509 -outform PEM | sudo tee /etc/osquery/certificate.crt
+  shell: python -c "import ssl; print ssl.get_server_certificate(('{{ doorman_domain }}', {{ doorman_port }}))" | sudo tee /etc/osquery/certificate.crt
 
 - name: Copy OSQuery flags file
   template:
-    src: files/osquery.flags
+    src: conf/doorman/osquery.flags
     dest: /etc/osquery/osquery.flags
     owner: root
     group: root
@@ -45,7 +45,7 @@
 
 - name: Copy OSQuery secret
   template:
-    src: files/osquery.key
+    src: conf/doorman/osquery.key
     dest: /etc/osquery/osquery.key
     owner: root
     group: root

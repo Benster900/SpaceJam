@@ -1,7 +1,7 @@
 - name: Set hostname
   command: hostnamectl set-hostname ip-{{ ansible_default_ipv4.address }}
 
-- name: Add Wazuh repo for CentOS
+- name: Add Wazuh repo for CentOS and Redhat
   yum_repository:
     name: wazuh_repo
     description: Wazuh agent repo
@@ -10,16 +10,39 @@
     enabled: yes
     gpgkey: https://packages.wazuh.com/key/GPG-KEY-WAZUH
     gpgcheck: yes
-  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+  when: ansible_distribution == 'CentOS'
 - yum_repository:
     name: wazuh_repo
     description: Wazuh agent repo
     enabled: yes
-    baseurl: https://packages.wazuh.com/yum/el/7/$basearch
+    baseurl: https://packages.wazuh.com/yum/rhel/$releasever/$basearch
     enabled: yes
     gpgkey: https://packages.wazuh.com/key/GPG-KEY-WAZUH
     gpgcheck: yes
-  when: ansible_distribution == 'Fedora'
+  when: ansible_os_family == "RedHat"  
+
+- name: Add Wazuh repo for Ubuntu 
+  package:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - curl
+    - apt-transport-https
+    - lsb-release
+  when: ansible_distribution == 'Ubuntu'
+- shell: curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH > /tmp/wazuh.gpg
+- apt_key:
+    file: /tmp/wazuh.gpg
+    state: present
+  when: ansible_distribution == 'Ubuntu'
+- command: lsb_release -cs
+  register: CODENAME
+  when: ansible_distribution == 'Ubuntu'
+- apt_repository:
+    repo: deb https://packages.wazuh.com/apt {{ CODENAME }} main
+    state: present
+  when: ansible_distribution == 'Ubuntu'
+
 
 - name: Install Wazuh
   package:
@@ -31,8 +54,8 @@
 
 - lineinfile:
     path: /var/ossec/etc/ossec.conf
-    regexp: '<server-ip>MANAGER_IP</server-ip>'
-    line: '    <server-ip>{{ wazuh_api_domain }}</server-ip>'
+    regexp: '<server-ip>'
+    line: '    <server-hostname>{{ wazuh_api_domain }}</server-hostname>'
 
 - get_url:
     url: https://raw.githubusercontent.com/wazuh/wazuh-api/2.0/examples/api-register-agent.sh
@@ -60,6 +83,7 @@
     line: 'PASSWORD="{{ wazuh_api_pass }}"'
 - name: Register Wazuh API script
   shell: /tmp/api-register-agent.sh
+  ignore_errors: True
 
 
 - name: Enable Wazuh service
