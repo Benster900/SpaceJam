@@ -12,57 +12,71 @@
     ipa_user: '{{ freeipa_admin_username }}'
     ipa_pass: '{{ freeipa_admin_password }}'
   with_items:
-    - jim
-    - james
-    - jones
-    - rick
-    - morty
-    - marty
-    - larry
-    - bobby
-    - jerry
-    - jessica
-    - america
-    - dude2222
-    - minion
-    - placeholder
-    - ubuntu
-    - host
-    - user
-    - play
-    - book
-    - yaml
-    - ansible
-    - username
-    - otto
-    - rc3user
-    - student
-    - cseclabs
-    - beer
-    - hades
-    - optimus
-    - megatron
-    - zeus
-    - glados
-    - holdmybeer
-    - password
-    - hackme
-    - rockyou
-    - arnold
-    - palmer
-    - putty
-    - megan
-    - morgan
-    - molly
-    - equifax
-    - jack
-    - steve
-    - reddit
-    - bumblebee
-    - spherical
-    - wheel
-    - treeroot
-  run_once: true
+    - furphybogger
+    - quaggageggy
+    - occiputboggin
+    - zaftigpish
+    - gazumpchug
+    - awkwardfoddered
+    - tweezersloaby
+    - gongoozledodgy
+    - ladidahonk
+    - mooseblootered
+    - turduckenbox
+    - nambypambyhames
+    - gristleblimey
+    - bumfknackered
+    - filletskint
+    - ecdysiastsnecky
+    - dollopbaffies
+    - maverickminger
+    - bubblesgutted
+    - finaglecraic
+    - gubbinsscatter
+    - bobbinbolloxology
+    - scruffybahoochie
+    - ensorcellgowl
+    - sousaphonelecky
+    - mumpsimusbawbag
+    - masticategutties
+    - bloviatechuffed
+    - britchesporkies
+    - rummageshift
+    - quokkacannie
+    - nincompoopgawk
+    - ranivorousbure
+    - gazeboloupin
+    - skedaddlebaytin
+    - logorrheagaff
+    - poppysmicdangleberry
+    - dudgeonyokes
+    - kerfuffledobber
+    - goombahgombeen
+    - klutzloused
+    - crudivoreclarted
+    - termitesbawhair
+    - sackolagonin
+    - manholepuke
+    - quibbleglaikit
+    - flummoxclart
+    - yahookippy
+    - fatuousbampot
+    - godwotterymardy
+
+- name: Create admin group
+  ipa_group:
+    name: '{{ freeipa_admin_group }}'
+    description: Hackinglab admins
+    user: '{{ item }}'
+    ipa_host: '{{ freeipa_hostname }}.{{ freeipa_domain }}'
+    ipa_user: '{{ freeipa_admin_username }}'
+    ipa_pass: '{{ freeipa_admin_password }}'
+  with_items:
+    - maverickminger
+    - gazeboloupin
+    - tweezersloaby
+    - quibbleglaikit
+    - godwotterymardy
 
 - name: Create sudo rule for admins
   ipa_sudorule:
@@ -70,15 +84,8 @@
     description: Allow to run every command with sudo
     cmdcategory: all
     hostcategory: all
-    usercategory: all
-    user:
-      - '{{ item }}'
+    usergroup:
+      - '{{ freeipa_admin_group }}'
     ipa_host: '{{ freeipa_hostname }}.{{ freeipa_domain }}'
     ipa_user: '{{ freeipa_admin_username }}'
     ipa_pass: '{{ freeipa_admin_password }}'
-  with_items:
-    - morgan
-    - hackme
-    - equifax
-    - minion
-    - placeholder

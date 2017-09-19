@@ -49,24 +49,20 @@
     state: latest
   when: ansible_distribution == 'CentOS' or ansible_os_family == "RedHat"
 
-####################################################################
-# Setup /etc/resolve
-####################################################################
-- template:
-    src: conf/freeipa/resolv.conf
-    dest: /etc/resolv.conf
-    owner: root
-    group: root
-    mode: '0600'
+###################################################################
+# Uninstall any old settings for a FreeIPA server
+###################################################################
+- name: Uninstall IPA client
+  shell: ipa-client-install --uninstall
+  ignore_errors: True
 
-####################################################################
+###################################################################
 # Install/Setup FreeIPA
 ####################################################################
-- name: Install IPAserver
+- name: Install IPA client
   package: name='{{ item }}' state=present
   with_items:
     - vim 
-    - net-tools 
     - freeipa-client 
 
 - name: Run the ipa-server-client command

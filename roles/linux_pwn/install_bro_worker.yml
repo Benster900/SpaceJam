@@ -8,7 +8,7 @@
     owner: root
     group: root
     mode: '0600'
-  delegate_to: {{ manager}}
+  delegate_to: "{{groups['manager']}}"
 
 ####################################################################
 # Install Bro dependencies
@@ -106,7 +106,7 @@
   with_items:
     - broctl deploy
     - broctl status
-  delegate_to: 172.16.54.148
+  delegate_to: "{{groups['manager']}}"
 
 ####################################################################
 #  Slack notification
