@@ -1,0 +1,14 @@
+#- hosts: mail
+#  sudo: yes
+#  tasks:
+#    - include: roles/services/install_mail.yml
+
+- hosts: database
+  sudo: yes
+  tasks:
+    - include: roles/services/install_mysql.yml
+    
+
+#- hosts: webserver
+#  tasks:
+#     - include: roles/services/install_wordpress.yml  

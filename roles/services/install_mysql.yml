@@ -1,3 +1,13 @@
+####################################################################
+# Set hostname
+####################################################################
+- name: Set hostname
+  command: hostname {{ inventory_hostname }}
+- command: hostnamectl set-hostname {{ inventory_hostname }}
+
+####################################################################
+# Install MySQL
+####################################################################
 - name: Install/Setup MySQL
   package:
     name: mysql-server
@@ -6,4 +16,86 @@
     name: mysql
     state: started
     enabled: yes
-- shell: python philer.py    
+
+- name: Install MySQL-python for Ansible
+  apt: name=python-mysqldb state=present
+  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+- name: Install python-mysqldb for Ansible
+  yum: name=MySQL-python state=present
+  when: ansible_os_family == 'RedHat' or ansible_os_family == 'Oracle Linux'
+
+
+####################################################################
+# Secure MySQL setup
+####################################################################
+- name: delete anonymous MySQL server user
+  action: mysql_user user="" host="{{ ansible_hostname }}" state="absent" 
+  ignore_errors: yes
+
+- name: delete anonymous MySQL server user for localhost
+  action: mysql_user user="" state="absent"   
+  ignore_errors: yes
+
+- name: remove the MySQL test database
+  action: mysql_db db=test state=absent
+  ignore_errors: yes
+
+- name: Change root user password on first run
+  mysql_user: login_user=root
+              login_password=''
+              name=root
+              password={{ mysql_root_password }}
+              priv=*.*:ALL,GRANT
+              host={{ item }}
+  with_items:
+    - "{{ ansible_hostname }}"
+    - 127.0.0.1
+    - ::1
+    - localhost 
+  ignore_errors: yes
+
+####################################################################
+# Create wordpress database and user
+####################################################################
+- name: Create Wordpress database
+  shell: mysql -u {{ mysql_root_user }} --password={{ mysql_root_password }} -e "CREATE DATABASE {{ wordpress_database }} DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci;" 
+  ignore_errors: yes
+
+- name: Create wordpress user
+  mysql_user:
+    name: '{{ wordpress_root_user }}'
+    password: '{{ wordpress_root_password }}'
+    priv: '{{ wordpress_database }}.*:ALL'
+    state: present
+    login_user: '{{ mysql_root_user }}'
+    login_password: '{{ mysql_root_password }}'
+    host: '%'
+  ignore_errors: yes
+
+####################################################################
+# Create PII database 
+####################################################################
+- name: Create user database for PII
+  mysql_db:
+    name: '{{ user_database_name}}'
+    state: present
+    login_user: '{{ mysql_root_user }}'
+    login_password: '{{ mysql_root_password }}'   
+
+- name: Create table for PII
+  shell: mysql -u {{ mysql_root_user }} --password={{ mysql_root_password }} -e "use {{ user_database_name}}; create table {{ user_table_name }} (firstname varchar(80), dob date, address varchar(100), medicine varchar(100));"
+  ignore_errors: yes
+
+- name: Copy PII
+  copy:
+    src: conf/mysql/pii.sql
+    dest: /tmp
+
+
+
+- name: Load PII data into MySQL
+  shell: mysql -u {{ mysql_root_user }} --password={{ mysql_root_password }} -e "use {{ user_database_name}}; LOAD DATA INFILE 'PHIle_output.txt' INTO TABLE personal FIELDS TERMINATED BY ' '";
+  args:
+    chdir: /tmp
+

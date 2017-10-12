@@ -1,36 +1,6 @@
 ####################################################################
-# Setup NTP
+# Install Python module for Ansible
 ####################################################################
-- name: Setup NTP time sync
-  package: name={{ item }} state=installed
-  with_items:
-    - ntpdate
-    - ntp-doc
-
-- service:
-    name: ntpd
-    state: started
-    enabled: yes
-####################################################################
-# Update system
-####################################################################
-- name: Update system and add RHEL
-  yum_repository:
-    name: epel
-    description: EPEL YUM repo
-    baseurl: https://download.fedoraproject.org/pub/epel/$releasever/$basearch/
-  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
-- yum:
-    name: '*'
-    state: latest
-  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
-- dnf:
-    name: '*'
-    state: latest
-  when: ansible_distribution == 'Fedora'
-- package: name={{ item }} state=installed
-  with_items:
-    - python-pip
 - pip:
     name={{ item }}
   with_items:
@@ -56,13 +26,16 @@
     - postgresql-server
     - postgresql-contrib
   when: ansible_distribution == 'Fedora'
-- shell: "/usr/pgsql-9.6/bin/postgresql96-setup initdb"
+
+- name: Init Postgres DB
+  shell: "/usr/pgsql-9.6/bin/postgresql96-setup initdb"
   when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
   ignore_errors: True
 - shell: "/usr/bin/postgresql-setup initdb"
   when: ansible_distribution == 'Fedora'
   ignore_errors: True
-- lineinfile:
+- name: Change Postgres user auth
+  lineinfile:
     path: /var/lib/pgsql/9.6/data/pg_hba.conf
     regexp: '^host    all             all             127.0.0.1/32            ident'
     line: 'host    all             all             127.0.0.1/32            md5'
@@ -126,6 +99,7 @@
     - libffi-devel
     - gcc
     - postgresql-devel
+    - npm
 - shell: pip install --upgrade pip
 - git:
     repo: https://github.com/mwielgoszewski/doorman.git
@@ -141,7 +115,8 @@
   command: cd /opt/doorman && virtualenv env
   become: true
   become_user: doorman
-- pip:
+- name: Install Python modules for Doorman
+  pip:
     requirements: /opt/doorman/requirements.txt
     virtualenv: /opt/doorman/env
 - pip:
@@ -150,7 +125,8 @@
   with_items:
     - uwsgi
     - flask
-- file:
+- name: Chown doorman directory to doorman user
+  file:
     path: /opt/doorman
     owner: doorman
     group: doorman
@@ -162,14 +138,15 @@
     group: doorman
     state: directory
     recurse: yes
-- template:
-    src: files/settings.py
+- name: Copy Doorman configs
+  template:
+    src: conf/doorman/settings.py
     dest: /opt/doorman/doorman/settings.py
     owner: doorman
     group: doorman
     mode: 0644
 - template:
-    src: files/doorman.ini
+    src: conf/doorman/doorman.ini
     dest: /opt/doorman/doorman.ini
     owner: doorman
     group: doorman
@@ -215,93 +192,46 @@
 ####################################################################
 # Install/Setup Nginx + wsgi/flask + OpenSSL
 ####################################################################
-- name: Install/Setup Nginx + wsgi/flask + OpenSSL
-  package: name=nginx state=installed
-- file:
-    path: /etc/nginx/ssl
-    owner: root
-    group: root
-    state: directory
-- stat:
-    path: /etc/ssl/certs/dhparam.pem 2048
-  register: stat_dhparam
-- shell: openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
-  when: stat_dhparam.stat.exists == False
-
- - name: get public IP
-      ipify_facts:
-      register: public_ip
-
-- stat:
+- name: Check if cert exists already
+  stat:
     path: /etc/nginx/ssl/certificate.crt
   register: stat_cert
-- shell: openssl req -new -nodes -x509 -days 3650 -subj "/C=US/ST=NY/L=Rochester/O=None/CN={{ doorman_domain }}" -keyout /etc/nginx/ssl/private.key -out /etc/nginx/ssl/certificate.crt
+  
+- name: Create OpenSSL custom cert for Doorman
+  shell: openssl req -new -nodes -x509 -days 3650 -subj "/C=US/ST=NY/L=Rochester/O=None/CN={{ doorman_domain }}" -keyout /etc/nginx/ssl/private.key -out /etc/nginx/ssl/certificate.crt
   when: stat_cert.stat.exists == False
 
-- template:
-    src: files/nginx.conf
+- name: Copy Nginx configs for Doorman
+  template:
+    src: conf/doorman/nginx.conf
     dest: /etc/nginx/nginx.conf
     owner: root
     group: root
     mode: '0600'
 - template:
-    src: files/doorman.conf
+    src: conf/doorman/doorman.conf
     dest: /etc/nginx/conf.d/doorman.conf
     owner: root
     group: root
     mode: '0600'
 - template:
-    src: files/doorman.service
+    src: conf/doorman/doorman.service
     dest: /etc/systemd/system/doorman.service
     owner: root
     group: root
     mode: '0600'
 
 ####################################################################
-# Set SElinux to permissive mode
-####################################################################
-- selinux:
-    policy: targeted
-    state: permissive
-
-####################################################################
 # Restart Nginx and doorman service
 ####################################################################
-- service:
+- name: Start Nginx and Doorman service
+  service:
     name: '{{ item }}'
     state: restarted
     enabled: yes
   with_items:
     - doorman
     - nginx
-
-####################################################################
-# Install/Setup FireallD
-####################################################################
-- name: Install/Setup FireallD
-  yum:
-    name: firewalld
-    state: latest
-- service:
-    name: firewalld
-    state: started
-    enabled: yes
-- firewalld:
-    service: ssh
-    permanent: true
-    state: enabled
-- firewalld:
-    service: https
-    permanent: true
-    state: enabled
-- firewalld:
-    service: http
-    permanent: true
-    state: enabled
-- service:
-    name: firewalld
-    state: restarted
-    enabled: yes
 
 ####################################################################
 #  Slack notification

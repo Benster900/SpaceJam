@@ -1,11 +1,9 @@
 - hosts: manager
+  sudo: yes
   tasks:
-    - name: Generate SSH key pair for Bro
-      shell: ssh-keygen -b 2048 -t rsa -f /root/.ssh/id_rsa -q -N ""
-      args:
-        creates: /root/.ssh/id_rsa
-    - include: 'roles/manager/install_bro_manager.yml'
-    - include: 'roles/manager/install_wazuh_manager.yml'
-    - include: 'roles/manager/install_doorman.yml'
+#    - include : 'roles/manager/deploy_bro_manager.yml'
+    - include: 'roles/manager/deploy_initial_setup.yml'
+    - include: 'roles/manager/deploy_wazuh_manager.yml'
+    - include: 'roles/manager/deploy_doorman.yml'
       environment:
         DOORMAN_ENV: prod

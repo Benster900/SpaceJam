@@ -1,0 +1,75 @@
+####################################################################
+# Set hostname
+####################################################################
+- name: Set hostname
+  command: hostname {{ inventory_hostname }}
+- command: hostnamectl set-hostname {{ inventory_hostname }}
+
+####################################################################
+# Install Nginx and dependencies
+####################################################################
+- name : Install dependencies and Nginx
+  package: name={{ item }} state=present
+  with_items:
+    - nginx
+    - php-fpm 
+    - php-mysql
+    - php-curl 
+    - php-gd 
+    - php-mbstring 
+    - php-mcrypt 
+    - php-xml 
+    - php-xmlrpc
+- service:
+    name: php7.0-fpm
+    state: restarted
+    enabled: yes
+
+####################################################################
+# Untar download
+####################################################################
+- name: Untar Wordpress
+  unarchive:
+    src: https://wordpress.org/latest.tar.gz
+    dest: /tmp/wordpress
+    remote_src: yes
+
+####################################################################
+# Setup wordpress
+####################################################################
+- name: Rename Wordpress config file
+  shell: mv /tmp/wordpress/wp-config-sample.php /tmp/wordpress/wp-config.php
+  ignore_errors: yes
+
+- file:
+   path: /tmp/wordpress/wp-content/upgrade
+   state: touch
+   mode: 0755
+- name: Copy Wordpress contents
+  shell: cp -a /tmp/wordpress/. /var/www/html
+
+- shell: chmod g+w /var/www/html/wp-content
+- shell: chmod -R g+w /var/www/html/wp-content/themes
+- shell: chmod -R g+w /var/www/html/wp-content/plugins
+
+####################################################################
+# Copy NGINX templates
+####################################################################
+- name: Copy Nginx templates
+  template:
+    src: conf/nginx.conf
+    dest: /etc/nginx/nginx.conf
+
+- template:
+    src: conf/wordpress/nginx_wordpress.conf
+    dest: /etc/nginx/conf.d/nginx_wordpress.conf
+
+####################################################################
+# Restart NGINX
+####################################################################
+- name: Restart Nginx
+  service:
+    name: nginx
+    state: restarted
+    enabled: yes
+

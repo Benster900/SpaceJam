@@ -1,27 +1,11 @@
 ---
-#- hosts: agents
-#  sudo: yes
-#  tasks:     
-#    - name: Setup FreeIPA client
-#      include: roles/services/deploy_freeipa_agent.yml
+- hosts: agents
+  become: yes
+  tasks:     
+    - name: Setup FreeIPA client
+      include: roles/freeipa/deploy_freeipa_agent.yml
 #    - name: Instal and register OSSEC agent
-#     include: roles/linux_pwn/install_wazuh_agent.yml
+#      include: roles/linux_agent/install_wazuh_agent.yml
 #    - name: Install OSQuery
-#      include: roles/linux_pwn/install_osquery_agent.yml
+#      include: roles/linux_agent/install_osquery_agent.yml
 
-#- hosts: router
-#  user: ec2-user
-#  sudo: yes
-#  tasks:
-#    - name: Setup Bro worker
-#      include: roles/linux_pwn/install_bro_worker.yml
-
-- hosts: freeipa
-  sudo: yes
-  tasks:
-    - name: Install FreeIPA
-      include: 'roles/services/install_freeipa.yml'
-    - name: Setup/Configure FreeIPA users
-      include: 'roles/services/freeipa_users.yml'
-      vars:
-        rockyou: "{{ lookup('file', 'conf/freeipa/rockyou.txt').split('\n') }}"

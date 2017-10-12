@@ -2,38 +2,10 @@
 # Set hostname
 ####################################################################
 - name: Set hostname
-  command: hostnamectl set-hostname ip-{{ ansible_default_ipv4.address }}
+  command: hostname {{ ansible_ssh_host }}
+- command: hostnamectl set-hostname {{ ansible_ssh_host }}
+- debug: msg="{{ ansible_ssh_host }}"
 
-####################################################################
-# Setup NTP
-####################################################################
-- name: Setup NTP time sync
-  package: name="{{ item }}" state=installed
-  with_items:
-    - ntp
-    - ntp-doc
-  when: ansible_os_family == "RedHat"
-  with_items:
-    - ntpd-doc
-    - ntpdate
-  when: ansible_distribution == 'Ubuntu'
-
-- name: Start NTP daemon
-  service:
-    name: chronyd
-    state: stopped
-    enabled: no
-  when: ansible_os_family == "RedHat" or ansible_distribution == 'CentOS'
-  service:
-    name: ntpd
-    state: started
-    enabled: yes
-  when: ansible_os_family == "RedHat"
-- service:
-    name: ntp
-    state: started
-    enabled: yes
-  when: ansible_distribution == 'Ubuntu'
 
 ####################################################################
 # Update system
@@ -66,5 +38,18 @@
     - freeipa-client 
 
 - name: Run the ipa-server-client command
-  command: ipa-client-install -U --domain={{ freeipa_domain }} --hostname=ip-{{ ansible_default_ipv4.address }} --server={{ freeipa_hostname }}.{{ freeipa_domain }} --realm={{ freeipa_domain|upper }} --principal={{ freeipa_admin_username }} --password={{ freeipa_admin_password }} --mkhomedir --force-join --force-ntpd
+  command: ipa-client-install -U --domain={{ freeipa_domain }} --hostname={{ ansible_ssh_host }} --server={{ freeipa_hostname }}.{{ freeipa_domain }} --realm={{ freeipa_domain|upper }} --principal={{ freeipa_admin_username }} --password={{ freeipa_admin_password }} --mkhomedir --force-join --force-ntpd
   ignore_errors: True
+
+- name: Ubuntu home dir bug
+  shell: "sed -i 's/Default: no/Default: yes/g' /usr/share/pam-configs/mkhomedir"
+  when: ansible_distribution == 'Ubuntu'
+
+####################################################################
+#  Slack notification
+####################################################################
+- name: Send slack notification when done
+  slack:
+    token: "{{ slack_token }}"
+    msg: '{{ ansible_nodename }}:{{ ansible_default_ipv4.address }} - Finished setting up FreeIPA agent on {{ ansible_nodename }}'
+    channel: "{{ slack_channel }}"

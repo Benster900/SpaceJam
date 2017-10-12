@@ -2,7 +2,8 @@
   package: name={{item}} state=installed
   with_items:
     - postfix
-    - dovecot
+    - dovecot-imapd
+    - dovecot-pop3d
 
 - name: Dovecot config
   template:
@@ -15,7 +16,7 @@
 - name: Postfix config
   template:
     src: conf/mail/main.cf
-    dest: /etc/dovecot/main.cf
+    dest: /etc/postfix/main.cf
     owner: root
     group: root
     mode: '0600'
@@ -26,6 +27,6 @@
     state: restarted
   with_items:
     - postfix
-    - dovevot
+    - dovecot
 
        

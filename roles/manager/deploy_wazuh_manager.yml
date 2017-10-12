@@ -1,36 +1,13 @@
-- name: Set hostname
-  hostname:
-    name: wazuh-manager
-  when: ansible_hostname == "localhost.localdomain"
-
-- name: Setup NTP time sync
-  package: name={{ item }} state=installed
-  with_items:
-    - ntpdate
-    - ntp-doc
-
-- service:
-    name: ntpd
-    state: started
-    enabled: yes
-
-- name: Update system and add RHEL
-  yum_repository:
-    name: epel
-    description: EPEL YUM repo
-    baseurl: https://download.fedoraproject.org/pub/epel/$releasever/$basearch/
-  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
-- yum:
-    name: '*'
-    state: latest
-  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
-- package: name={{item}} state=installed
-  with_items:
-    - python-pip
+####################################################################
+# Install Python module for Ansible
+####################################################################
 - pip:
     name: pexpect
     version: 3.3
 
+####################################################################
+# Install/Setup Wazuh Manager
+####################################################################
 - name: Add Wazuh repo
   yum_repository:
     name: wazuh_repo
@@ -47,7 +24,7 @@
     name: wazuh-manager
     state: installed
 - template:
-    src: files/ossec_server.conf
+    src: conf/wazuh/ossec_server.conf
     dest: /var/ossec/etc/ossec.conf
     owner: root
     group: root
@@ -57,6 +34,9 @@
     state: started
     enabled: yes
 
+####################################################################
+# Install/Setup Wazuh API
+####################################################################
 - name: Install/Setup Wazuh API
   get_url:
     url: https://rpm.nodesource.com/setup_6.x
@@ -66,7 +46,8 @@
   with_items:
     - wazuh-api
     - nodejs
-- shell: node htpasswd -b user {{ wazuh_api_user }} {{ wazuh_api_pass }}
+- name: Create Wazuh API user
+  shell: node htpasswd -b user {{ wazuh_api_user }} {{ wazuh_api_pass }}
   args:
     chdir: /var/ossec/api/configuration/auth
 - lineinfile:
@@ -86,6 +67,9 @@
     state: restarted
     enabled: yes
 
+####################################################################
+# Install/Setup Elasticsearch
+####################################################################
 - name: Add Elastic repo
   rpm_key:
     state: present
@@ -110,12 +94,16 @@
     state: started
     enabled: yes
 - pause:
-    seconds: 30
-- shell: >
+    seconds: 60
+- name: Download and load Wazuh ES templates
+  shell: >
     curl https://raw.githubusercontent.com/wazuh/wazuh-kibana-app/master/server/startup/integration_files/template_file.json | curl -XPUT 'http://localhost:9200/_template/wazuh' -H 'Content-Type: application/json' -d @-
 - shell: >
     curl https://raw.githubusercontent.com/wazuh/wazuh-kibana-app/master/server/startup/integration_files/alert_sample.json | curl -XPUT "http://localhost:9200/wazuh-alerts-"`date +%Y.%m.%d`"/wazuh/sample" -H 'Content-Type: application/json' -d @-
 
+####################################################################
+# Install/Setup Logstash
+####################################################################
 - name: Install/Setup Logstash
   yum:
     name: logstash
@@ -129,6 +117,9 @@
     state: started
     enabled: yes
 
+####################################################################
+# Install/Setup Kibana
+####################################################################
 - name: Install/Setup Kibana
   yum:
     name: kibana
@@ -144,39 +135,26 @@
     state: restarted
     enabled: yes
 
-- name: Install/Setup Nginx + OpenSSL
-  yum: name={{item}} state=installed
-  with_items:
-    - nginx
-    - httpd-tools
-- expect:
+- name: Create Kibana webGUI user
+  expect:
     command: 'htpasswd -c /etc/nginx/htpasswd.users {{kibana_user}}'
     responses:
       (?i)password: "{{kibana_pass}}"
-- shell: cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
-- template:
-    src: files/nginx.conf
-    dest: /etc/nginx/nginx.conf
-    owner: root
-    group: root
-    mode: '0600'
-
-- file:
-    path: /etc/nginx/ssl
-    state: directory
-    mode: 0755
-
-- shell: openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
-- shell: openssl req -new -nodes -x509 -days 3650 -subj "/C=US/ST=NY/L=Rochester/O=None/CN={{ wazuh_domain }}" -keyout /etc/nginx/ssl/wazuh.key -out /etc/nginx/ssl/wazuh.crt
+      
+####################################################################
+# Setup/Config Nginx
+####################################################################
+- name: Create OpenSSL custom cert for Wazuh
+  shell: openssl req -new -nodes -x509 -days 3650 -subj "/C=US/ST=NY/L=Rochester/O=None/CN={{ wazuh_domain }}" -keyout /etc/nginx/ssl/wazuh.key -out /etc/nginx/ssl/wazuh.crt
 
 - template:
-    src: files/nginx_wazuh.conf
+    src: conf/wazuh/nginx_wazuh.conf
     dest: /etc/nginx/conf.d/nginx_wazuh.conf
     owner: root
     group: root
     mode: '0600'
 - template:
-    src: files/nginx_wazuh_api.conf
+    src: conf/wazuh/nginx_wazuh_api.conf
     dest: /etc/nginx/conf.d/nginx_wazuh_api.conf
     owner: root
     group: root
@@ -184,56 +162,6 @@
 
 - service:
     name: nginx
-    state: restarted
-    enabled: yes
-
-- name: Set SElinux to permissive
-  selinux:
-    policy: targeted
-    state: permissive
-
-- name: Install/Setup FireallD
-  yum:
-    name: firewalld
-    state: latest
-- service:
-    name: firewalld
-    state: started
-    enabled: yes
-- firewalld:
-    service: ssh
-    permanent: true
-    state: enabled
-- firewalld:
-    service: http
-    permanent: true
-    state: enabled
-- firewalld:
-    service: https
-    permanent: true
-    state: enabled
-- firewalld:
-    port: 514/tcp
-    permanent: true
-    state: enabled
-- firewalld:
-    port: 514/tcp
-    permanent: true
-    state: enabled
-- firewalld:
-    port: 1514/udp
-    permanent: true
-    state: enabled
-- firewalld:
-    port: 5044/tcp
-    permanent: true
-    state: enabled
-- firewalld:
-    port: 55000/tcp
-    permanent: true
-    state: enabled
-- service:
-    name: firewalld
     state: restarted
     enabled: yes
 

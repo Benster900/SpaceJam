@@ -1,0 +1,4 @@
+- hosts: pfsense
+  tasks:
+    - include: 'roles/pfsense/deploy_pfsense.yml'
+    

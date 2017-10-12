@@ -1,3 +1,4 @@
+myorigin = $mydomain
 smtpd_banner = $myhostname.$mydomain mail server
 biff = no
 # appending .domain is the MUA's job.
@@ -17,7 +18,6 @@ myhostname = mail.{{ base_domain }}
 mydomain = {{ base_domain }}
 alias_maps = hash:/etc/aliases
 alias_database = hash:/etc/aliases
-myorigin = /etc/mailname
 mydestination = $mydomain, $myhostname, localhost.localdomain, localhost
 relayhost =
 mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128

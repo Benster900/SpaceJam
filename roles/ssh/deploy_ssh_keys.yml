@@ -1,0 +1,5 @@
+- name: Copy authorized keys kile
+  template:
+    src: conf/ssh/ssh_keys
+    dest: /home/ubuntu/.ssh/authorized_keys
+    mode: 0600

@@ -1,0 +1,9 @@
+- hosts: freeipa
+  sudo: yes
+  tasks:
+    - name: Install FreeIPA
+      include: 'roles/freeipa/deploy_freeipa_server.yml'
+    - name: Setup/Configure FreeIPA users
+      include: 'roles/freeipa/deploy_freeipa_users.yml'
+      vars:
+        rockyou: "{{ lookup('file', 'conf/freeipa/rockyou.txt').split('\n') }}"

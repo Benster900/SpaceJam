@@ -1,9 +1,6 @@
 # SpaceJam
 This project automates setting up an IR infrastructure to monitor network and hosts events.
 
-## Setup enviornment
-cp group_vars/all.example group_vars/all
-Please fill out each key with a value
 
 # Run SpaceJam to setup manager
 ## Setup locally
@@ -28,4 +25,3 @@ ansible-playbook -i hosts --private-key <private-key> deploy_agent.yml -u root
 * Setup Bro
 * Create services scripts
 * Ansible notifications for error messages
-# WhiteBrew

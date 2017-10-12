@@ -1,0 +1,30 @@
+####################################################################
+# Install/Setup Docker
+####################################################################
+- name: Install/Setup Docker
+  shell: curl -fsSL https://get.docker.com/ | sh
+
+- name: Install docker-compose
+  pip:
+    name: docker-compose
+
+- name: Start Docker service
+  service:
+    name: docker
+    state: restarted
+    enabled: yes
+
+####################################################################
+# Install/Setup theHive
+#################################################################### 
+- name: Download theHive git repo
+  git: 
+    repo: 'https://github.com/CERT-BDF/TheHive.git'
+    dest: /opt/TheHive
+
+- name: Change config for local Elasticsearch server
+
+- name: Start docker service
+  shell: docker-compose up -d
+  args:
+    chdir: /opt/TheHive

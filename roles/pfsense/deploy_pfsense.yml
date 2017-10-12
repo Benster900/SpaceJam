@@ -1,0 +1,56 @@
+####################################################################
+# Install dependencies for Bro
+####################################################################
+- name: Install Bro and dependencies
+  shell: pkg add http://pkg.freebsd.org/freebsd:10:x86:64/release_3/All/{{ item }}
+  with_items:
+    - cmake-modules-3.4.1.txz
+    - libarchive-3.1.2_5,1.txz
+    - jsoncpp-0.6.0.r2_2.txz
+    - lua51-5.1.5_9.txz
+    - swig-2.0.12_1.txz
+    - python27-2.7.11_1.txz
+    - py27-setuptools27-19.2.txz
+    - openssl-1.0.2_11.txz
+    - lbl-hf-1.5.txz
+    - GeoIP-1.6.6.txz
+    - ipsumdump-1.85.txz
+    - lbl-cf-1.2.5.txz
+    - py27-sqlite3-2.7.11_7.txz
+    - cmake-3.4.1.txz
+    - bash-4.3.42_1.txz
+    - m4-1.4.17_1,1.txz
+    - bison-2.7.1,1.txz
+    - rsync-3.1.2_1.txz
+    - broccoli-1.97,1.txz
+    - bro-2.4.1.txz
+
+- name: Update GeoIP data
+  shell: /usr/local/bin/geoipupdate.sh
+
+- name: Extract pfSense-pkg-bro
+  unarchive:
+    src: https://github.com/shadonet/pfSense-pkg-bro/files/1248279/pfSense-pkg-bro-2.4.1.zip
+    dest: /tmp/
+    remote_src: yes
+
+- name: Install pfSense-pkg-bro
+  shell: pkg add pfSense-pkg-bro-2.4.1.txz
+  args:
+    chdir: /tmp
+
+#- name: Create Python symlink
+#  shell: ln -s /usr/local/bin/python2.7 /usr/bin/python
+#- shell: ln -s /usr/local/bin/bash /usr/bin/bash
+
+#- name: Start Bro service
+#  shell: 
+
+####################################################################
+#  Slack notification
+####################################################################
+- name: Send slack notification when done
+  slack:
+    token: "{{ slack_token }}"
+    msg: '{{ ansible_nodename }}:{{ ansible_default_ipv4.address }} - Finished setting up Bro agent on pfSense'
+    channel: "{{ slack_channel }}"

@@ -1,0 +1,14 @@
+####################################################################
+# Logstash configs
+####################################################################
+- name: Download Logstash beats input config
+  shell: curl -so /etc/logstash/conf.d/02-beats-input.conf https://raw.githubusercontent.com/Benster900/CloudsOfHoney/master/server/logstash/02-beats-input.conf
+
+- name: Download Bro filter config
+  shell: curl -so /etc/logstash/conf.d/
+
+- name: Restart 
+  service:
+    name: logstash
+    state: restarted
+    enabled: yes

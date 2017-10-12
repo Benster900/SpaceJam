@@ -1,0 +1,102 @@
+####################################################################
+# Set hostname
+#################################################################### 
+- name: Set hostname
+  command: hostname manager.{{ base_domain }}
+- command: hostnamectl set-hostname manager.{{ base_domain }}
+
+####################################################################
+# Setup NTP
+####################################################################
+#- name: Setup NTP time sync
+#  package: name='{{ item }}' state=installed
+#  with_items:
+#    - ntpdate
+#    - ntp-doc
+#- service:
+#    name: ntpd
+#    state: started
+#    enabled: yes
+
+####################################################################
+# Update system
+####################################################################
+- name: Update system and add RHEL
+  yum_repository:
+    name: epel
+    description: EPEL YUM repo
+    baseurl: https://download.fedoraproject.org/pub/epel/$releasever/$basearch/
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+- yum:
+    name: '*'
+    state: latest
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+- package: name={{ item }} state=installed
+  with_items:
+    - python-pip
+
+####################################################################
+# Set SElinux to permissive mode
+####################################################################
+- name: Set SELinux to permissive
+  selinux:
+    policy: targeted
+    state: permissive
+
+####################################################################
+# Install/Setup Nginx 
+####################################################################
+- name: Install/Setup Nginx
+  package: name=nginx state=installed
+  with_items:
+    - nginx
+    - httpd-tools
+
+- name: Backup NGINX config
+  shell: cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
+
+- name: Copy Nginx config
+  template:
+    src: conf/nginx.conf
+    dest: /etc/nginx/nginx.conf
+    owner: root
+    group: root
+    mode: '0600'
+
+- file:
+    path: /etc/nginx/ssl
+    owner: root
+    group: root
+    state: directory
+- file:
+    path: /etc/nginx/ssl
+    state: directory
+    mode: 0755
+
+- name: Generate DH key
+  stat:
+    path: /etc/ssl/certs/dhparam.pem
+  register: stat_dhparam
+- shell: openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
+  when: stat_dhparam.stat.exists == False
+
+####################################################################
+# Install/Setup FirewallD
+####################################################################
+- name: Install/Setup FireallD
+  yum:
+    name: firewalld
+    state: latest
+- service:
+    name: firewalld
+    state: stopped
+    enabled: no
+
+####################################################################
+#  Slack notification
+####################################################################
+- name: Send slack notification when done
+  slack:
+    token: "{{ slack_token }}"
+    msg: '{{ ansible_nodename }}:{{ ansible_default_ipv4.address }} - Init setting up manager'
+    channel: "{{ slack_channel }}"
