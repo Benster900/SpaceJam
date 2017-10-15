@@ -8,15 +8,15 @@
 ####################################################################
 # Setup NTP
 ####################################################################
-#- name: Setup NTP time sync
-#  package: name='{{ item }}' state=installed
-#  with_items:
-#    - ntpdate
-#    - ntp-doc
-#- service:
-#    name: ntpd
-#    state: started
-#    enabled: yes
+- name: Setup NTP time sync
+  package: name='{{ item }}' state=installed
+  with_items:
+    - ntpdate
+    - ntp-doc
+- service:
+    name: ntpd
+    state: started
+    enabled: yes
 
 ####################################################################
 # Update system
@@ -47,7 +47,9 @@
 # Install/Setup Nginx 
 ####################################################################
 - name: Install/Setup Nginx
-  package: name=nginx state=installed
+  package: 
+    name: '{{ item }}' 
+    state: installed
   with_items:
     - nginx
     - httpd-tools
@@ -98,5 +100,5 @@
 - name: Send slack notification when done
   slack:
     token: "{{ slack_token }}"
-    msg: '{{ ansible_nodename }}:{{ ansible_default_ipv4.address }} - Init setting up manager'
+    msg: '{{ ansible_nodename }}:{{ ansible_default_ipv4.address }} - Finished initial setup up manager'
     channel: "{{ slack_channel }}"

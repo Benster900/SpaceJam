@@ -2,5 +2,5 @@
   become: yes
   become_method: sudo
   tasks:
-    - name: Setup HAProxy nodes
-      include: roles/ssh/deploy_ssh_keys.yml
+    - name: Deploy SSH keys
+      import_tasks: roles/ssh/deploy_ssh_keys.yml

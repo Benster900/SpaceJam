@@ -1,9 +1,10 @@
 - hosts: manager
-  sudo: yes
+  become: yes
+  become_method: sudo
   tasks:
-#    - include : 'roles/manager/deploy_bro_manager.yml'
-    - include: 'roles/manager/deploy_initial_setup.yml'
-    - include: 'roles/manager/deploy_wazuh_manager.yml'
-    - include: 'roles/manager/deploy_doorman.yml'
+#    - import_tasks : 'roles/manager/deploy_bro_manager.yml'
+    - import_tasks: 'roles/manager/deploy_initial_setup.yml'
+    - import_tasks: 'roles/manager/deploy_wazuh_manager.yml'
+    - import_tasks: 'roles/manager/deploy_doorman.yml'
       environment:
         DOORMAN_ENV: prod

@@ -1,4 +1,6 @@
 - hosts: pfsense
+  become: yes
+  become_method: sudo
   tasks:
-    - include: 'roles/pfsense/deploy_pfsense.yml'
+    - import_tasks: 'roles/pfsense/deploy_pfsense.yml'
     

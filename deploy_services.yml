@@ -1,14 +1,18 @@
-#- hosts: mail
-#  sudo: yes
-#  tasks:
-#    - include: roles/services/install_mail.yml
-
-- hosts: database
-  sudo: yes
+- hosts: mail
+  become: yes
+  become_method: sudo
   tasks:
-    - include: roles/services/install_mysql.yml
+    - import_tasks: roles/services/install_mail.yml
+
+#- hosts: database
+#  become: yes
+#  become_method: sudo
+#  tasks:
+#    - import_tasks: roles/services/install_mysql.yml
     
 
 #- hosts: webserver
+#  become: yes
+#  become_method: sudo
 #  tasks:
-#     - include: roles/services/install_wordpress.yml  
+#     - import_tasks: roles/services/install_wordpress.yml  
