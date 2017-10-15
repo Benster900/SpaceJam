@@ -10,10 +10,10 @@
 ####################################################################
 - name: Install/Setup MySQL
   package:
-    name: mysql-server
+    name: mariadb-server
     state: installed
 - service:
-    name: mysql
+    name: mariadb
     state: started
     enabled: yes
 
@@ -74,28 +74,13 @@
   ignore_errors: yes
 
 ####################################################################
-# Create PII database 
+# Disable FirewallD
 ####################################################################
-- name: Create user database for PII
-  mysql_db:
-    name: '{{ user_database_name}}'
-    state: present
-    login_user: '{{ mysql_root_user }}'
-    login_password: '{{ mysql_root_password }}'   
-
-- name: Create table for PII
-  shell: mysql -u {{ mysql_root_user }} --password={{ mysql_root_password }} -e "use {{ user_database_name}}; create table {{ user_table_name }} (firstname varchar(80), dob date, address varchar(100), medicine varchar(100));"
-  ignore_errors: yes
-
-- name: Copy PII
-  copy:
-    src: conf/mysql/pii.sql
-    dest: /tmp
-
-
-
-- name: Load PII data into MySQL
-  shell: mysql -u {{ mysql_root_user }} --password={{ mysql_root_password }} -e "use {{ user_database_name}}; LOAD DATA INFILE 'PHIle_output.txt' INTO TABLE personal FIELDS TERMINATED BY ' '";
-  args:
-    chdir: /tmp
-
+- name: Install/Setup FireallD
+  yum:
+    name: firewalld
+    state: latest
+- service:
+    name: firewalld
+    state: stopped
+    enabled: no
