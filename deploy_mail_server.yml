@@ -1,0 +1,5 @@
+- hosts: mail
+  become: yes
+  become_method: sudo
+  tasks:
+    - import_tasks: roles/services/install_mail.yml

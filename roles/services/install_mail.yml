@@ -1,10 +1,17 @@
+####################################################################
+# Install/Setup Postfix and Doveot
+####################################################################
 - name: Install postfix and dovecot
-  package: name={{item}} state=installed
+  package: 
+    name: '{{ item }}' 
+    state: present
   with_items:
     - postfix
-    - dovecot-imapd
-    - dovecot-pop3d
+    - dovecot
 
+####################################################################
+# Copy config files
+####################################################################
 - name: Dovecot config
   template:
     src: conf/mail/dovecot.conf
@@ -21,6 +28,9 @@
     group: root
     mode: '0600'
 
+####################################################################
+# Start services
+####################################################################
 - name: Start Dovecot and postfix
   service: 
     name: '{{ item }}' 
@@ -28,5 +38,17 @@
   with_items:
     - postfix
     - dovecot
+
+####################################################################
+# Disable FirewallD
+####################################################################
+- name: Install/Setup FireallD
+  yum:
+    name: firewalld
+    state: latest
+- service:
+    name: firewalld
+    state: stopped
+    enabled: no
 
        
