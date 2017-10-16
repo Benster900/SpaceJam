@@ -6,8 +6,8 @@
     - include_vars: group_vars/freeipa
     - name: Setup FreeIPA client
       import_tasks: roles/freeipa/deploy_freeipa_agent.yml
-#    - name: Instal and register OSSEC agent
-#      import_tasks: roles/linux_agent/install_wazuh_agent.yml
+    - name: Instal and register OSSEC agent
+      import_tasks: roles/linux_agent/install_wazuh_agent.yml
 #    - name: Install OSQuery
 #      import_tasks: roles/linux_agent/install_osquery_agent.yml
 

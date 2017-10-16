@@ -1,17 +1,40 @@
 ####################################################################
 # Install/Setup Docker
 ####################################################################
+- name: Add Docker repo
+  shell: yum install yum-utils -y
+- shell: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+- shell: yum makecache fast
+
 - name: Install/Setup Docker
-  shell: curl -fsSL https://get.docker.com/ | sh
+  package:
+    name: '{{ item }}'
+    state: present
+  with_items:
+    - docker-ce
+    - python-pip
 
-- name: Install docker-compose
+- name: Upgrade pip
   pip:
-    name: docker-compose
+    name: pip
+    extra_args: --upgrade
 
-- name: Start Docker service
+- pip:
+    name: '{{ item }}'
+    extra_args: --upgrade
+  with_items:
+    - docker-py
+    - httplib2
+    - docker-compose
+    - docker
+
+- name: Update docker stuff
+  shell: "pip uninstall docker-py; pip uninstall docker; pip install docker"
+
+- name: Start Docekr service
   service:
     name: docker
-    state: restarted
+    state: started
     enabled: yes
 
 ####################################################################
@@ -24,9 +47,6 @@
 
 
 - name: Start theHive docker container
-  docker_container:
-    name: mydata
-    
-  shell: docker-compose up -d
+  shell: docker-compose up -d 
   args:
-    chdir: /opt/TheHive
+    chdir: /opt/TheHive/docker/thehive

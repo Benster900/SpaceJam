@@ -1,13 +1,4 @@
 ####################################################################
-# Set hostname
-####################################################################
-- name: Set hostname
-  command: hostname {{ ansible_ssh_host }}
-- command: hostnamectl set-hostname {{ ansible_ssh_host }}
-- debug: msg="{{ ansible_ssh_host }}"
-
-
-####################################################################
 # Update system
 ####################################################################
 - name: Update system and add RHEL
@@ -38,7 +29,7 @@
     - freeipa-client 
 
 - name: Run the ipa-server-client command
-  command: ipa-client-install -U --domain={{ freeipa_domain }} --hostname={{ ansible_ssh_host }} --server={{ freeipa_domain }} --realm={{ base_domain |upper }} --principal={{ freeipa_admin_username }} --password={{ freeipa_admin_password }} --mkhomedir --force-join --force-ntpd
+  command: ipa-client-install -U --domain={{ freeipa_domain }} --hostname={{ ansible_hostname }} --server={{ freeipa_domain }} --realm={{ base_domain |upper }} --principal={{ freeipa_admin_username }} --password={{ freeipa_admin_password }} --mkhomedir --force-join --force-ntpd
   ignore_errors: True
 
 - name: Ubuntu home dir bug

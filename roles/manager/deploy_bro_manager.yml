@@ -1,11 +1,13 @@
 ####################################################################
 # Logstash configs
 ####################################################################
-- name: Download Logstash beats input config
-  shell: curl -so /etc/logstash/conf.d/02-beats-input.conf https://raw.githubusercontent.com/Benster900/CloudsOfHoney/master/server/logstash/02-beats-input.conf
-
-- name: Download Bro filter config
-  shell: curl -so /etc/logstash/conf.d/
+- name: Logstash configs for Bro
+  template:
+    src: conf/logstash/02-beats-input.conf
+    dest: /etc/logstash/conf.d/02-beats-input.conf
+- template: 
+    src: conf/logstash/30-elasticsearch-output.conf
+    dest: /etc/logstash/conf.d/30-elasticsearch-output.conf
 
 - name: Restart 
   service:
