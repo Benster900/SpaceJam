@@ -64,6 +64,15 @@
 - shell: /usr/local/bin/broctl start
 
 ####################################################################
+# Compile Filebeat from source
+####################################################################
+- name: Copy Filebeat binary
+  copy: 
+    src: binary/filebeat
+    dest: /usr/local/bin/filebeat
+
+
+####################################################################
 #  Slack notification
 ####################################################################
 - name: Send slack notification when done

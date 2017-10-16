@@ -1,11 +1,4 @@
 ####################################################################
-# Set hostname
-####################################################################
-- name: Set hostname
-  command: hostname {{ inventory_hostname }}
-- command: hostnamectl set-hostname {{ inventory_hostname }}
-
-####################################################################
 # Install MySQL
 ####################################################################
 - name: Install/Setup MySQL

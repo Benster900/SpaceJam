@@ -1,29 +1,43 @@
 ####################################################################
-# Set hostname
-####################################################################
-- name: Set hostname
-  command: hostname {{ inventory_hostname }}
-- command: hostnamectl set-hostname {{ inventory_hostname }}
-
-####################################################################
 # Install Nginx and dependencies
 ####################################################################
 - name : Install dependencies and Nginx
   package: name={{ item }} state=present
   with_items:
-    - nginx
+    - nginx 
+    - mariadb 
+    - php 
     - php-fpm 
-    - php-mysql
-    - php-curl 
+    - php-common
+    - php-mysql 
     - php-gd 
-    - php-mbstring 
-    - php-mcrypt 
     - php-xml 
-    - php-xmlrpc
+    - php-mbstring 
+    - php-mcrypt
 - service:
-    name: php7.0-fpm
+    name: php-fpm
     state: restarted
     enabled: yes
+
+####################################################################
+# Generate SSL
+####################################################################
+- file:
+    path: /etc/nginx/ssl
+    owner: root
+    group: root
+    state: directory 
+
+- name: Generate DH key
+  stat:
+    path: /etc/nginx/ssl/dhparam.pem
+  register: stat_dhparam
+- shell: openssl dhparam -out /etc/nginx/ssl/dhparam.pem 2048
+  when: stat_dhparam.stat.exists == False
+
+- name: Create OpenSSL custom cert for Wordpress
+  shell: openssl req -new -nodes -x509 -days 3650 -subj "/C=US/ST=NY/L=Rochester/O=None/CN={{ base_domain }}" -keyout /etc/nginx/ssl/nginx.key -out /etc/nginx/ssl/nginx.crt
+  when: stat_dhparam.stat.exists == False
 
 ####################################################################
 # Untar download
@@ -31,30 +45,39 @@
 - name: Untar Wordpress
   unarchive:
     src: https://wordpress.org/latest.tar.gz
-    dest: /tmp/wordpress
+    dest: /tmp
     remote_src: yes
 
 ####################################################################
 # Setup wordpress
 ####################################################################
 - name: Rename Wordpress config file
-  shell: mv /tmp/wordpress/wp-config-sample.php /tmp/wordpress/wp-config.php
+  shell: cp /tmp/wordpress/wp-config-sample.php /tmp/wordpress/wp-config.php
   ignore_errors: yes
+
+- name: Copy wp-config.php
+  template:
+    src: conf/wordpress/wp-config.php
+    dest: /tmp/wordpress/wp-config.php
 
 - file:
    path: /tmp/wordpress/wp-content/upgrade
    state: touch
    mode: 0755
+   
 - name: Copy Wordpress contents
-  shell: cp -a /tmp/wordpress/. /var/www/html
+  shell: cp -a /tmp/wordpress/. /usr/share/nginx/html/wordpress
 
-- shell: chmod g+w /var/www/html/wp-content
-- shell: chmod -R g+w /var/www/html/wp-content/themes
-- shell: chmod -R g+w /var/www/html/wp-content/plugins
+- name: Set permissions on Wordpress directory
+  shell: chown -R nginx:nginx /usr/share/nginx/html/wordpress
+- shell: chmod -R 777 /usr/share/nginx/html/wordpress
 
 ####################################################################
 # Copy NGINX templates
 ####################################################################
+- name: Backup NGINX config
+  shell: cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
+
 - name: Copy Nginx templates
   template:
     src: conf/nginx.conf
