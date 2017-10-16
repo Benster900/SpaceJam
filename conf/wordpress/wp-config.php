@@ -29,7 +29,7 @@ define('DB_USER', '{{ wordpress_root_user }}');
 define('DB_PASSWORD', '{{ wordpress_root_password }}');
 
 /** MySQL hostname */
-define('DB_HOST', 'database.{{ base_domain }}');
+define('DB_HOST', '{{ groups["database"][0] }}');
 
 /** Database Charset to use in creating database tables. */
 define('DB_CHARSET', 'utf8');
@@ -46,7 +46,6 @@ define('DB_COLLATE', '');
  *
  * @since 2.6.0
  */
-
 define('AUTH_KEY',         'gpx .Xd8^xPJ2MSR VgUc}|W]&+vP{BgX[_sy4lnS]Ca9Q+ -E,[ZwM~.&^~<B+4');
 define('SECURE_AUTH_KEY',  '20jOY!$,ByI<BL t zOUjs1#}S:`N7+d1XPpsJn*C/hOd-$9_DX}.d2c^=HUJld+');
 define('LOGGED_IN_KEY',    '_MQy)]#<hWV`iWKbLp+BVoa**PqBt=*tBi1s.ysAlEP-w_s]b d}c.|hXz`o|g8.');
@@ -78,3 +77,13 @@ $table_prefix  = 'wp_';
  *
  * @link https://codex.wordpress.org/Debugging_in_WordPress
  */
+define('WP_DEBUG', false);
+
+/* That's all, stop editing! Happy blogging. */
+
+/** Absolute path to the WordPress directory. */
+if ( !defined('ABSPATH') )
+	define('ABSPATH', dirname(__FILE__) . '/');
+
+/** Sets up WordPress vars and included files. */
+require_once(ABSPATH . 'wp-settings.php');

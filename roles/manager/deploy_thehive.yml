@@ -22,9 +22,11 @@
     repo: 'https://github.com/CERT-BDF/TheHive.git'
     dest: /opt/TheHive
 
-- name: Change config for local Elasticsearch server
 
-- name: Start docker service
+- name: Start theHive docker container
+  docker_container:
+    name: mydata
+    
   shell: docker-compose up -d
   args:
     chdir: /opt/TheHive

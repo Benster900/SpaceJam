@@ -1,6 +1,14 @@
 ####################################################################
 # Install Nginx and dependencies
 ####################################################################
+- name: Set SELinux to permissive mode 
+  selinux:
+    policy: targeted
+    state: permissive
+
+####################################################################
+# Install Nginx and dependencies
+####################################################################
 - name : Install dependencies and Nginx
   package: name={{ item }} state=present
   with_items:
@@ -45,32 +53,21 @@
 - name: Untar Wordpress
   unarchive:
     src: https://wordpress.org/latest.tar.gz
-    dest: /tmp
+    dest: /usr/share/nginx/html
     remote_src: yes
 
 ####################################################################
 # Setup wordpress
 ####################################################################
-- name: Rename Wordpress config file
-  shell: cp /tmp/wordpress/wp-config-sample.php /tmp/wordpress/wp-config.php
-  ignore_errors: yes
-
 - name: Copy wp-config.php
   template:
     src: conf/wordpress/wp-config.php
-    dest: /tmp/wordpress/wp-config.php
-
-- file:
-   path: /tmp/wordpress/wp-content/upgrade
-   state: touch
-   mode: 0755
-   
-- name: Copy Wordpress contents
-  shell: cp -a /tmp/wordpress/. /usr/share/nginx/html/wordpress
+    dest: /usr/share/nginx/html/wordpress/wp-config.php
 
 - name: Set permissions on Wordpress directory
   shell: chown -R nginx:nginx /usr/share/nginx/html/wordpress
 - shell: chmod -R 777 /usr/share/nginx/html/wordpress
+
 
 ####################################################################
 # Copy NGINX templates

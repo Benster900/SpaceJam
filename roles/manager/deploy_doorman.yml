@@ -99,7 +99,7 @@
     - libffi-devel
     - gcc
     - postgresql-devel
-    - npm
+    - nodejs
 - shell: pip install --upgrade pip
 - git:
     repo: https://github.com/mwielgoszewski/doorman.git
@@ -201,16 +201,9 @@
   shell: openssl req -new -nodes -x509 -days 3650 -subj "/C=US/ST=NY/L=Rochester/O=None/CN={{ doorman_domain }}" -keyout /etc/nginx/ssl/private.key -out /etc/nginx/ssl/certificate.crt
   when: stat_cert.stat.exists == False
 
-- name: Copy Nginx configs for Doorman
-  template:
-    src: conf/doorman/nginx.conf
-    dest: /etc/nginx/nginx.conf
-    owner: root
-    group: root
-    mode: '0600'
 - template:
-    src: conf/doorman/doorman.conf
-    dest: /etc/nginx/conf.d/doorman.conf
+    src: conf/doorman/nginx_doorman.conf
+    dest: /etc/nginx/conf.d/nginx_doorman.conf
     owner: root
     group: root
     mode: '0600'
