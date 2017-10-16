@@ -1,0 +1,5 @@
+filebeat.prospectors:
+- input_type: log
+  paths:
+    - /usr/local/logs/current/*.log
+  document_type: bro

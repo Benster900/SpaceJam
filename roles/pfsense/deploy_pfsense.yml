@@ -66,11 +66,34 @@
 ####################################################################
 # Compile Filebeat from source
 ####################################################################
+- name: Create Filebeat directory
+  file:
+    path: /etc/filebeat
+    state: directory
+- file:
+    path: /etc/filebeat/conf.d
+    state: directory
+
 - name: Copy Filebeat binary
   copy: 
     src: binary/filebeat
-    dest: /usr/local/bin/filebeat
+    dest: /etc/filebeat/filebeat
 
+- name: Copy Filebeat config
+  template:
+    src: conf/filebeat/filebeat.conf
+    dest: /etc/filebeat/filebeat.conf
+- template:
+    src: conf/filebeat/bro.yml
+    dest: /etc/filebeat/conf.d/bro.yml
+
+- name: Add Filebeat to startup for 
+  lineinfile:
+    path: /etc/crontab
+    line: '@reboot /etc/filebeat/filebeat -c /etc/filebeat/filebeat.conf'
+
+- name: Start Filebeat
+  shell: 'nohup /etc/filebeat/filebeat -c /etc/filebeat/filebeat.conf &'
 
 ####################################################################
 #  Slack notification
