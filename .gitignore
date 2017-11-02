@@ -1,3 +1,2 @@
 *.retry
-group_vars/*
 hosts
