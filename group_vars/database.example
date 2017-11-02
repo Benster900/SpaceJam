@@ -1,0 +1,10 @@
+database_hostname: database
+mysql_root_user: root
+mysql_root_password: <mysql root password>
+
+wordpress_root_user: wordpress
+wordpress_root_password: <wordpress password>
+wordpress_database: wordpress
+
+user_database_name: user_db
+user_table_name: personal

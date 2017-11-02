@@ -1,0 +1,13 @@
+freeipa_hostname: freeipa
+freeipa_domain: '{{ freeipa_hostname }}.{{ base_domain }}'
+freeipa_directory_password: <Password>
+freeipa_admin_username: admin
+freeipa_admin_password: <Password>
+freeipa_admin_group: hackinglab_admins
+freeipa_dns_server1: 8.8.8.8
+freeipa_dns_server2: 8.8.4.4
+freeipa_default_shell: /bin/bash
+
+# investigator account
+freeipa_investigator_user: <username>
+freeipa_investigator_pass: <Password>
